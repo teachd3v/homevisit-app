@@ -1,4 +1,4 @@
-﻿/// <reference types="vite/client" />
+/// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js'
 import { mockCandidates, mockVisitors, mockSchedules } from '../mocks/data'
 
@@ -249,7 +249,7 @@ const mockSupabase = {
 
 // Check and initialize the client
 if (!useMock && (!supabaseUrl || !supabaseAnonKey)) {
-  throw new Error('Missing Supabase environment variables')
+  console.warn('Missing Supabase environment variables')
 }
 
 export const supabase = useMock 
@@ -261,4 +261,5 @@ export const supabase = useMock
         detectSessionInUrl: true,
       },
     })
+
 
