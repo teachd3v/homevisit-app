@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",`n    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma"
+    "preview": "vite preview",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
