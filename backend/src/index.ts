@@ -88,7 +88,7 @@ app.get('/candidates', async (req, res) => {
 });
 
 app.post('/candidates', async (req, res) => {
-  const { id, full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } = req.body; 
+  const { id, full_name, gender, region, campus, major, ukt } = req.body; 
   const candidate = await (req as any).prisma.candidate.create({ data: { id, full_name, gender, region, campus, major, ukt } });
   res.json(candidate);
 });
@@ -100,7 +100,7 @@ app.post('/candidates/bulk', async (req, res) => {
 });
 
 app.put('/candidates/:id', async (req, res) => {
-  const { id, full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } = req.body; 
+  const { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } = req.body; 
   const candidate = await (req as any).prisma.candidate.update({ where: { id: req.params.id }, data: { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } });
   res.json(candidate);
 });
@@ -129,7 +129,7 @@ app.post('/visitors/bulk', async (req, res) => {
 });
 
 app.put('/visitors/:id', async (req, res) => {
-  const { id, name, role } = req.body; 
+  const { name, role } = req.body; 
   const visitor = await (req as any).prisma.visitor.update({ where: { id: req.params.id }, data: { name, role } });
   res.json(visitor);
 });
@@ -217,7 +217,7 @@ app.delete('/results/:id', async (req, res) => {
 });
 
 // Global error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error', message: err.message, stack: err.stack });
 });
@@ -228,3 +228,4 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export default app;
+
