@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { mockCandidates, mockVisitors, mockSchedules } from '../mocks/data'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dummy.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || 'dummy'
 const useMock = import.meta.env.VITE_USE_MOCK === 'true'
 
 // Helper to get or set data in localStorage for persistence in mock mode
@@ -261,5 +261,6 @@ export const supabase = useMock
         detectSessionInUrl: true,
       },
     })
+
 
 
