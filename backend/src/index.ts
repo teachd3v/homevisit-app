@@ -174,9 +174,10 @@ app.post('/results', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Backend is running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log('Listening on ' + PORT));
+}
+module.exports = app;
 
 
 
@@ -202,3 +203,6 @@ app.delete('/results/:id', async (req, res) => {
   res.json({ message: 'Deleted' });
 });
 
+
+
+export default app;
