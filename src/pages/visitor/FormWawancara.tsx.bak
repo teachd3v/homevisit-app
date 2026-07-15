@@ -1,0 +1,871 @@
+import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import * as XLSX from 'xlsx'
+import { useAuthStore } from '../../store/authStore'
+import { useCandidateStore } from '../../store/candidateStore'
+import { useFormResultsStore, FormResult } from '../../store/formResultsStore'
+import { useInstrumentStore } from '../../store/instrumentStore'
+
+const emoticons = [
+  { val: 1, label: '😢', text: 'Sangat Tidak Sesuai' },
+  { val: 2, label: '🙁', text: 'Tidak Sesuai' },
+  { val: 3, label: '😐', text: 'Cukup Sesuai' },
+  { val: 4, label: '🙂', text: 'Sesuai' },
+  { val: 5, label: '😀', text: 'Sangat Sesuai' }
+]
+
+export default function FormWawancara() {
+  const { candidateId } = useParams()
+  const navigate = useNavigate()
+  const { interviewerId, interviewerName, role } = useAuthStore((state) => ({ 
+    interviewerId: state.interviewerId,
+    interviewerName: state.interviewerName,
+    role: state.role
+  }))
+
+  const [currentStep, setCurrentStep] = useState<number>(1)
+  const [answers, setAnswers] = useState<Record<string, { rating: number; note: string }>>({})
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [submittedResult, setSubmittedResult] = useState<FormResult | null>(null)
+  const [scheduleId, setScheduleId] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'warning' | 'error' } | null>(null)
+  const [validationErrors, setValidationErrors] = useState<{ questions: string[]; photos: string[] } | null>(null)
+
+  // Photos State
+  const [photosFormHomeVisit, setPhotosFormHomeVisit] = useState<string[]>([])
+  const [photoTampakDepan, setPhotoTampakDepan] = useState<string>('')
+  const [photoTampakDapur, setPhotoTampakDapur] = useState<string>('')
+  const [photoBersamaKeluarga, setPhotoBersamaKeluarga] = useState<string>('')
+  const [photoBeritaAcara, setPhotoBeritaAcara] = useState<string>('')
+
+  const candidates = useCandidateStore((state) => state.candidates)
+  const addResult = useFormResultsStore((state) => state.addResult)
+  const instruments = useInstrumentStore((state) => state.instruments)
+
+  useEffect(() => {
+    useCandidateStore.getState().loadFromSupabase()
+    useInstrumentStore.getState().loadFromSupabase()
+
+    const fetchScheduleId = async () => {
+      if (!candidateId) return
+      try {
+        const { supabase } = await import('../../lib/supabase')
+        const { data, error } = await supabase
+          .from('schedule_candidates')
+          .select('schedule_id')
+          .eq('candidate_id', candidateId)
+          .single()
+
+        if (error) {
+          console.error('Could not find schedule for candidate:', error.message)
+          setScheduleId(null)
+          return
+        }
+        if (data) {
+          setScheduleId(data.schedule_id)
+        }
+      } catch (error) {
+        console.warn('Error fetching schedule_id:', error)
+        setScheduleId(null)
+      }
+    }
+
+    fetchScheduleId()
+  }, [candidateId])
+
+  const candidate = candidates.find((c) => c.id === candidateId)
+
+  useEffect(() => {
+    if (!candidate) {
+      navigate('/interviewer')
+    }
+  }, [candidate, navigate])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentStep])
+
+  if (!candidate) return null
+
+  const steps = [
+    { num: 1, title: 'Form Observasi', icon: '📝' },
+    { num: 2, title: 'Dokumentasi Observasi', icon: '📸' },
+    { num: 3, title: 'Review Observasi', icon: '👁️' }
+  ]
+
+  const handleRatingChange = (qId: string, rating: number) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [qId]: {
+        rating,
+        note: prev[qId]?.note || ''
+      }
+    }))
+  }
+
+  const handleNoteChange = (qId: string, note: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [qId]: {
+        rating: prev[qId]?.rating || 0,
+        note
+      }
+    }))
+  }
+
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: 'homevisit' | 'depan' | 'dapur' | 'keluarga' | 'berita'
+  ) => {
+    const files = e.target.files
+    if (!files) return
+
+    const maxSize = 10 * 1024 * 1024 // Maksimal 10MB untuk semua jenis
+    const label = '10MB'
+
+    const readAndStore = (file: File) => {
+      if (file.size > maxSize) {
+        alert(`Batas maksimal ukuran file ${type} adalah ${label}. File "${file.name}" terlalu besar.`)
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string
+        if (type === 'homevisit') {
+          setPhotosFormHomeVisit(prev => {
+            if (prev.length >= 10) {
+              alert('Maksimal 10 file untuk Foto Dokumen Fisik!')
+              return prev
+            }
+            return [...prev, base64]
+          })
+        } else if (type === 'depan') {
+          setPhotoTampakDepan(base64)
+        } else if (type === 'dapur') {
+          setPhotoTampakDapur(base64)
+        } else if (type === 'keluarga') {
+          setPhotoBersamaKeluarga(base64)
+        } else if (type === 'berita') {
+          setPhotoBeritaAcara(base64)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+
+    Array.from(files).forEach(readAndStore)
+  }
+
+  const removeHomeVisitPhoto = (index: number) => {
+    setPhotosFormHomeVisit(prev => prev.filter((_, idx) => idx !== index))
+  }
+
+  const handleNext = () => {
+    setCurrentStep(prev => prev + 1)
+  }
+
+  const handlePrev = () => {
+    setCurrentStep(prev => prev - 1)
+  }
+
+  const handleSubmit = () => {
+    const unanswered = instruments
+      .filter(inst => !answers[inst.id] || answers[inst.id].rating === 0)
+      .map((inst, idx) => `Pertanyaan No. ${idx + 1}: ${inst.pertanyaan || inst.label}`)
+
+    const missingPhotos: string[] = []
+    if (photosFormHomeVisit.length === 0) missingPhotos.push('Foto Dokumen Fisik Form Home Visit')
+    if (!photoTampakDepan) missingPhotos.push('Foto Tampak Depan Rumah (Wajib 1 Foto)')
+    if (!photoTampakDapur) missingPhotos.push('Foto Tampak Dapur (Wajib 1 Foto)')
+    if (!photoBersamaKeluarga) missingPhotos.push('Foto Bersama Keluarga Pendaftar (Wajib 1 Foto)')
+    if (!photoBeritaAcara) missingPhotos.push('Foto Berita Acara (Wajib 1 Foto)')
+
+    if (unanswered.length > 0 || missingPhotos.length > 0) {
+      setValidationErrors({
+        questions: unanswered,
+        photos: missingPhotos
+      })
+      return
+    }
+
+    // Save to Database mapping to Part A and Part B format for compatibility
+    const partA_results = instruments
+      .filter((inst) => inst.bagian.startsWith('A'))
+      .map((inst) => {
+        const ans = answers[inst.id]
+        return {
+          id: inst.id,
+          label: inst.label,
+          pertanyaan: inst.pertanyaan,
+          aspect: inst.aspek,
+          value: ans ? ans.rating >= 3 : false, // mapping rating: true if >= 3
+          note: ans?.note || '',
+          rating: ans?.rating || 0
+        }
+      })
+
+    const partB_results = instruments
+      .filter((inst) => !inst.bagian.startsWith('A'))
+      .map((inst) => {
+        const ans = answers[inst.id]
+        const rating = ans?.rating || 0
+        return {
+          id: inst.id,
+          label: inst.label,
+          aspect: inst.aspek,
+          value: (rating >= 4 ? 'yes' : rating === 3 ? 'maybe' : 'no') as 'yes' | 'maybe' | 'no',
+          score: rating,
+          note: ans?.note || ''
+        }
+      })
+
+    const partBTotal = partB_results.reduce((sum, item) => sum + item.score, 0)
+    const maxScore = partB_results.length * 5
+    const partBPercentage = maxScore > 0 ? (partBTotal / maxScore) * 100 : 0
+    const partAPass = partA_results.every(item => item.value)
+
+    const compiledNotes = Object.entries(answers)
+      .filter(([_, data]) => data.note.trim() !== '')
+      .map(([qId, data]) => {
+        const qText = instruments.find(i => i.id === qId)?.pertanyaan || 'Aspek'
+        return `[Tanya: ${qText}] Catatan: ${data.note}`
+      })
+      .join('\n')
+
+    const resultPayload: any = {
+      candidateId: candidateId || '',
+      candidateName: candidate?.full_name || 'Unknown',
+      interviewerId: interviewerId || '',
+      scheduleId: scheduleId || undefined,
+      interviewDate: new Date().toISOString().split('T')[0],
+      submittedAt: new Date().toISOString(),
+      partA: partA_results,
+      partB: partB_results,
+      notes: compiledNotes,
+      partAPass,
+      partBTotal,
+      partBPercentage,
+      photos: {
+        formHomeVisit: photosFormHomeVisit,
+        tampakDepan: photoTampakDepan,
+        tampakDapur: photoTampakDapur,
+        bersamaKeluarga: photoBersamaKeluarga,
+        beritaAcara: photoBeritaAcara
+      }
+    }
+
+    addResult(resultPayload)
+    setSubmittedResult({ id: `result-${Date.now()}`, ...resultPayload })
+    setShowSuccessModal(true)
+  }
+
+  const handleExportExcel = () => {
+    if (!submittedResult) return
+
+    const dataToExport = [
+      ['HASIL OBSERVASI HOME VISIT'],
+      [],
+      ['Informasi Kandidat'],
+      ['Nama:', submittedResult.candidateName],
+      ['ID Kandidat:', submittedResult.candidateId],
+      ['Tanggal Observasi:', submittedResult.interviewDate],
+      ['Visitor ID:', submittedResult.interviewerId],
+      [],
+      ['REKAP JAWABAN OBSERVASI (Likert 1-5)'],
+      ...instruments.map((inst) => {
+        const ans = answers[inst.id]
+        return [
+          inst.pertanyaan || inst.label,
+          ans ? `${ans.rating} (${emoticons.find(e => e.val === ans.rating)?.text})` : 'Belum diisi',
+          ans?.note || ''
+        ]
+      }),
+      [],
+      ['Dokumentasi Foto'],
+      ['Foto Dokumen Fisik:', `${photosFormHomeVisit.length} file`],
+      ['Foto Depan Rumah:', photoTampakDepan ? 'Tersedia' : 'Tidak'],
+      ['Foto Dapur:', photoTampakDapur ? 'Tersedia' : 'Tidak'],
+      ['Foto Bersama Keluarga:', photoBersamaKeluarga ? 'Tersedia' : 'Tidak'],
+      ['Foto Berita Acara:', photoBeritaAcara ? 'Tersedia' : 'Tidak'],
+      [],
+      ['STATUS AKHIR'],
+      ['Kelayakan Wajib (Part A):', submittedResult.partAPass ? 'LAYAK' : 'TIDAK LAYAK'],
+      ['Total Poin Evaluasi:', `${submittedResult.partBTotal}/${instruments.filter(i => !i.bagian.startsWith('A')).length * 5}`],
+      ['Skor Kelayakan (Part B):', `${submittedResult.partBPercentage.toFixed(2)}%`],
+    ]
+
+    const ws = XLSX.utils.aoa_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Hasil Observasi')
+
+    ws['!cols'] = [{ wch: 45 }, { wch: 30 }, { wch: 40 }]
+
+    const fileName = `Hasil_Observasi_${submittedResult.candidateName.replace(/\s+/g, '_')}_${submittedResult.interviewDate}.xlsx`
+    XLSX.writeFile(wb, fileName)
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between pb-12">
+      {/* Toast Alert */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white font-bold py-2.5 px-6 rounded-full shadow-lg text-sm transition-all animate-bounce">
+          {toast.message}
+        </div>
+      )}
+
+      {/* Topbar */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">Form Observasi</h1>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              oleh: <span className="font-semibold text-slate-700">{interviewerName}</span> ({role.toUpperCase()})
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/interviewer')}
+            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-red-50 hover:text-red-600 active:scale-95 transition-all"
+            title="Tutup Form"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Candidate Profile Card */}
+      <div className="max-w-4xl mx-auto w-full px-4 mt-6">
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-extrabold text-lg shrink-0">
+            {candidate.gender.toLowerCase() === 'perempuan' ? '👩' : '👨'}
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-extrabold text-slate-800 leading-tight">
+              {candidate.full_name}
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              ID: {candidate.id} • {candidate.school} ({candidate.major})
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="inline-block bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded">
+                📍 {candidate.region}
+              </span>
+              <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                {candidate.gender}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stepper Header */}
+      <div className="max-w-4xl mx-auto w-full px-4 mt-6">
+        <div className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm flex justify-between items-center gap-1">
+          {steps.map((step, idx) => (
+            <div key={step.num} className="flex items-center flex-1 justify-center">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(step.num)}
+                className="flex flex-col items-center focus:outline-none cursor-pointer group active:scale-95 transition-all"
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                    currentStep === step.num
+                      ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-md'
+                      : currentStep > step.num
+                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                  }`}
+                >
+                  {currentStep > step.num ? '✓' : step.icon}
+                </div>
+                <span
+                  className={`text-[9px] font-bold mt-1.5 whitespace-nowrap group-hover:text-emerald-700 transition-colors ${
+                    currentStep === step.num ? 'text-emerald-700' : 'text-slate-400'
+                  }`}
+                >
+                  {step.title}
+                </span>
+              </button>
+              {idx < steps.length - 1 && (
+                <div
+                  className={`h-0.5 flex-1 mx-2 ${
+                    currentStep > step.num ? 'bg-emerald-600' : 'bg-slate-100'
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Form Content */}
+      <div className="max-w-4xl mx-auto w-full px-4 mt-6 flex-1">
+        <div className="bg-white rounded-3xl border border-slate-100 p-5 md:p-6 shadow-sm">
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                📋 Form Kuesioner Observasi
+              </h3>
+              <div className="space-y-6">
+                {instruments.map((inst, index) => {
+                  const currentAnswer = answers[inst.id] || { rating: 0, note: '' }
+                  return (
+                    <div key={inst.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 leading-snug">
+                            {inst.pertanyaan || inst.label}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1 italic">
+                            Keterangan: {inst.keterangan || '-'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Aspek: {inst.aspek} • Bagian: {inst.bagian}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Emoticon Likert 1-5 Row */}
+                      <div className="grid grid-cols-5 gap-2 max-w-md mx-auto pt-2">
+                        {emoticons.map((e) => {
+                          const isSelected = currentAnswer.rating === e.val
+                          return (
+                            <button
+                              key={e.val}
+                              type="button"
+                              onClick={() => handleRatingChange(inst.id, e.val)}
+                              className={`flex flex-col items-center p-2 rounded-xl transition-all border text-center ${
+                                isSelected
+                                  ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-2 ring-emerald-100 scale-105'
+                                  : 'bg-white border-slate-200 hover:bg-slate-50 active:scale-95'
+                              }`}
+                            >
+                              <span className="text-2xl">{e.label}</span>
+                              <span className={`text-[8px] font-bold mt-1.5 leading-none ${
+                                isSelected ? 'text-emerald-700' : 'text-slate-400'
+                              }`}>
+                                {e.text}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Notes for Question */}
+                      <div className="pt-2">
+                        <textarea
+                          placeholder="Tulis catatan (opsional)..."
+                          value={currentAnswer.note}
+                          onChange={(e) => handleNoteChange(inst.id, e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white resize-none"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                📸 Dokumentasi & Foto Lapangan
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed bg-amber-50 text-amber-800 border border-amber-100 rounded-xl p-3">
+                ⚠️ **PENTING**: Semua foto dokumentasi di bawah ini wajib diunggah secara lengkap sebelum lanjut ke tahap review hasil observasi.
+              </p>
+
+              <div className="space-y-5">
+                {/* 1. Foto Dokumen Fisik Form Home Visit */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-800 block">
+                      1. Foto Dokumen Fisik Form Home Visit <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Bisa unggah beberapa file (Maksimal 10 file, @max 10MB)
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleFileUpload(e, 'homevisit')}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {photosFormHomeVisit.length > 0 && (
+                    <div className="grid grid-cols-5 gap-2 pt-2">
+                      {photosFormHomeVisit.map((photo, index) => (
+                        <div key={index} className="relative aspect-square rounded-lg border border-slate-200 overflow-hidden bg-white group">
+                          <img src={photo} className="w-full h-full object-cover" alt="Home Visit" />
+                          <button
+                            type="button"
+                            onClick={() => removeHomeVisitPhoto(index)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 active:scale-90 shadow-sm"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Foto Tampak Depan Rumah */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-800 block">
+                      2. Foto Tampak Depan Rumah <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Wajib 1 foto saja (Maksimal ukuran 10MB)
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'depan')}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {photoTampakDepan && (
+                    <div className="relative w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                      <img src={photoTampakDepan} className="w-full h-full object-cover" alt="Tampak Depan" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoTampakDepan('')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 active:scale-90"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Foto Tampak Dapur */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-800 block">
+                      3. Foto Tampak Dapur <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Wajib 1 foto saja (Maksimal ukuran 10MB)
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'dapur')}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {photoTampakDapur && (
+                    <div className="relative w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                      <img src={photoTampakDapur} className="w-full h-full object-cover" alt="Tampak Dapur" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoTampakDapur('')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 active:scale-90"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Foto Bersama Keluarga Pendaftar */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-800 block">
+                      4. Foto Bersama Keluarga Pendaftar <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Wajib 1 foto saja (Maksimal ukuran 10MB)
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'keluarga')}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {photoBersamaKeluarga && (
+                    <div className="relative w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                      <img src={photoBersamaKeluarga} className="w-full h-full object-cover" alt="Keluarga" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoBersamaKeluarga('')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 active:scale-90"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Foto Berita Acara */}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-slate-800 block">
+                      5. Foto Berita Acara <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Wajib 1 foto saja (Maksimal ukuran 10MB)
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'berita')}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  />
+                  {photoBeritaAcara && (
+                    <div className="relative w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-white">
+                      <img src={photoBeritaAcara} className="w-full h-full object-cover" alt="Berita Acara" />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoBeritaAcara('')}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 active:scale-90"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <h3 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                👁️ Review Data Observasi
+              </h3>
+
+              {/* Rekap Jawaban */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-slate-800">Rekap Kuesioner:</h4>
+                <div className="space-y-3">
+                  {instruments.map((inst, index) => {
+                    const ans = answers[inst.id]
+                    return (
+                      <div key={inst.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                        <p className="font-bold text-slate-800">
+                          {index + 1}. {inst.pertanyaan || inst.label}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-150">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">
+                              {emoticons.find(e => e.val === ans?.rating)?.label || '❓'}
+                            </span>
+                            <span className="font-semibold text-slate-700 text-[10px] uppercase">
+                              Skala: {ans?.rating} ({emoticons.find(e => e.val === ans?.rating)?.text})
+                            </span>
+                          </div>
+                        </div>
+                        {ans?.note && (
+                          <div className="mt-2 text-slate-500 bg-amber-50/50 p-2 rounded border border-amber-100/50">
+                            <span className="font-semibold text-amber-800 block text-[10px]">Catatan:</span>
+                            {ans.note}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Rekap Dokumentasi */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h4 className="text-sm font-bold text-slate-800">Rekap Dokumentasi Foto:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {/* Foto Depan */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+                    <img src={photoTampakDepan} className="w-full h-24 object-cover rounded-lg" alt="Depan Rumah" />
+                    <span className="text-[9px] font-bold text-slate-500 mt-2">Depan Rumah</span>
+                  </div>
+                  {/* Foto Dapur */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+                    <img src={photoTampakDapur} className="w-full h-24 object-cover rounded-lg" alt="Tampak Dapur" />
+                    <span className="text-[9px] font-bold text-slate-500 mt-2">Tampak Dapur</span>
+                  </div>
+                  {/* Foto Keluarga */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+                    <img src={photoBersamaKeluarga} className="w-full h-24 object-cover rounded-lg" alt="Keluarga" />
+                    <span className="text-[9px] font-bold text-slate-500 mt-2">Keluarga</span>
+                  </div>
+                  {/* Foto Berita Acara */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+                    <img src={photoBeritaAcara} className="w-full h-24 object-cover rounded-lg" alt="Berita Acara" />
+                    <span className="text-[9px] font-bold text-slate-500 mt-2">Berita Acara</span>
+                  </div>
+                  {/* Foto Home Visit (1st only in review, or count) */}
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+                    <div className="relative w-full h-24 rounded-lg overflow-hidden bg-white">
+                      <img src={photosFormHomeVisit[0]} className="w-full h-full object-cover" alt="Form Home Visit" />
+                      {photosFormHomeVisit.length > 1 && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-xs">
+                          +{photosFormHomeVisit.length - 1} File
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-500 mt-2">Form Fisik ({photosFormHomeVisit.length})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Bottom Buttons */}
+        <div className="mt-6 flex justify-between items-center gap-3">
+          {currentStep > 1 ? (
+            <button
+              onClick={handlePrev}
+              type="button"
+              className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-bold"
+            >
+              Kembali
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/interviewer')}
+              type="button"
+              className="px-6 py-2.5 rounded-xl border border-slate-200 text-red-600 bg-white hover:bg-red-50 active:scale-95 transition-all text-xs font-bold"
+            >
+              Batal
+            </button>
+          )}
+
+          {currentStep < 3 ? (
+            <button
+              onClick={handleNext}
+              type="button"
+              className="px-8 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 active:scale-95 transition-all text-xs font-bold shadow-md shadow-emerald-500/10"
+            >
+              Lanjut
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              type="button"
+              className="px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-95 transition-all text-xs font-bold shadow-md shadow-green-500/10"
+            >
+              Kirim Hasil Observasi
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && submittedResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in-50 duration-200">
+          <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-6 text-center space-y-4">
+            <div className="text-5xl">🎉</div>
+            <h2 className="text-xl font-bold text-slate-800">Observasi Selesai!</h2>
+            <p className="text-xs text-slate-500">Data hasil observasi telah berhasil disimpan secara aman di system browser database.</p>
+
+            <div className="bg-slate-50 rounded-2xl p-4 text-left text-xs space-y-3.5 border border-slate-100">
+              <div className="border-b border-slate-200/60 pb-2">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Nama Lengkap</p>
+                <p className="font-extrabold text-slate-800 text-sm">{submittedResult.candidateName}</p>
+              </div>
+              {(() => {
+                const candidateObj = candidates.find(c => c.id === candidateId)
+                if (!candidateObj) return null
+                return (
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID Kandidat</p>
+                      <p className="font-bold text-slate-700">{candidateObj.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Jenis Kelamin</p>
+                      <p className="font-bold text-slate-700">{candidateObj.gender || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Kampus</p>
+                      <p className="font-bold text-slate-700">{candidateObj.school || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Program Studi</p>
+                      <p className="font-bold text-slate-700">{candidateObj.major || '—'}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false)
+                  navigate('/interviewer')
+                }}
+                className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10"
+              >
+                Ke Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Errors Warning Modal */}
+      {validationErrors && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in-50 duration-200">
+          <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-lg">
+                ⚠️
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-800">Ada Data yang Belum Lengkap</h2>
+                <p className="text-[10px] text-slate-400">Harap lengkapi semua bagian berikut sebelum mengirim hasil observasi</p>
+              </div>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-1">
+              {validationErrors.questions.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider bg-red-50 px-2.5 py-1 rounded-lg">
+                    📝 Pertanyaan Belum Dijawab ({validationErrors.questions.length})
+                  </h3>
+                  <ul className="text-xs text-slate-650 space-y-1 pl-3 list-disc">
+                    {validationErrors.questions.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {validationErrors.photos.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider bg-amber-50 px-2.5 py-1 rounded-lg">
+                    📸 Dokumentasi Belum Diunggah ({validationErrors.photos.length})
+                  </h3>
+                  <ul className="text-xs text-slate-650 space-y-1 pl-3 list-disc">
+                    {validationErrors.photos.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setValidationErrors(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition-all active:scale-95 shadow-sm"
+              >
+                Mengerti & Lengkapi Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
