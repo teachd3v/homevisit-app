@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const connectionString = `${process.env.DATABASE_URL_POOLER}`;
+if (!process.env.DATABASE_URL_POOLER) throw new Error('DATABASE_URL_POOLER IS MISSING');
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -206,3 +207,4 @@ app.delete('/results/:id', async (req, res) => {
 
 
 export default app;
+
