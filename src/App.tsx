@@ -1,4 +1,5 @@
-﻿import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import GlobalLoader from './components/GlobalLoader'
 import HomePage from './pages/HomePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import DataKandidat from './pages/admin/DataKandidat'
@@ -22,6 +23,7 @@ export default function App() {
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <GlobalLoader />
       <Routes>
         {/* Home Page - Pilih Role */}
         <Route path="/" element={<HomePage />} />
@@ -55,5 +57,6 @@ export default function App() {
     </BrowserRouter>
   )
 }
+
 
 
