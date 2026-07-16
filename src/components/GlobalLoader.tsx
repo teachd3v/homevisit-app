@@ -1,19 +1,33 @@
 import { useLoadingStore } from '../store/loadingStore'
+import { useEffect, useState } from 'react'
 
 export default function GlobalLoader() {
   const activeRequests = useLoadingStore(state => state.activeRequests)
+  const [progress, setProgress] = useState(0)
 
-  if (activeRequests === 0) return null
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (activeRequests > 0) {
+      setProgress(15)
+      interval = setInterval(() => {
+        setProgress(p => (p < 85 ? p + (85 - p) * 0.1 : p))
+      }, 200)
+    } else {
+      setProgress(100)
+      const timeout = setTimeout(() => setProgress(0), 300)
+      return () => clearTimeout(timeout)
+    }
+    return () => clearInterval(interval)
+  }, [activeRequests])
+
+  if (progress === 0) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-200">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
-          <div className="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
-        </div>
-        <p className="text-slate-600 font-medium animate-pulse">Memuat Data...</p>
-      </div>
+    <div className="fixed top-0 left-0 w-full h-1 z-[9999] pointer-events-none">
+      <div 
+        className="h-full bg-indigo-600 transition-all duration-200 ease-out shadow-[0_0_10px_rgba(79,70,229,0.7)]"
+        style={{ width: `${progress}%` }}
+      />
     </div>
   )
 }
