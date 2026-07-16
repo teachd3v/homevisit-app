@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface HomeVisitResult {
   id: string
@@ -91,6 +91,7 @@ export const useHomeVisitStore = create<HomeVisitStore>((set, get) => ({
     }
   },
 }))
+
 
 
 

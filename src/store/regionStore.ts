@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface Region {
   id: string
@@ -126,4 +126,5 @@ export const useRegionStore = create<RegionStore>((set) => ({
     }
   }
 }))
+
 

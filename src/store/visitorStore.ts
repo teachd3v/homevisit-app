@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface Visitor {
   id: string
@@ -103,5 +103,6 @@ export const useVisitorStore = create<VisitorStore>((set, get) => ({
     return get().visitors.filter((i) => i.role === role)
   },
 }))
+
 
 

@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface Instrument {
   id: string
@@ -91,4 +91,5 @@ export const useInstrumentStore = create<InstrumentStore>((set) => ({
     }
   },
 }))
+
 

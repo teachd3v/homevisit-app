@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface Candidate {
   id: string
@@ -150,4 +150,5 @@ export const useCandidateStore = create<CandidateStore>((set) => ({
     }
   },
 }))
+
 

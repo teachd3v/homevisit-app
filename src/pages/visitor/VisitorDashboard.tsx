@@ -29,17 +29,12 @@ export default function VisitorDashboard() {
     useVisitorStore.getState().loadFromAPI()
     useHomeVisitStore.getState().loadFromAPI()
 
-    const refreshInterval = setInterval(() => {
-      useHomeVisitStore.getState().loadFromAPI()
-    }, 3000)
-
     const handleFocus = () => {
       useHomeVisitStore.getState().loadFromAPI()
     }
     window.addEventListener('focus', handleFocus)
 
     return () => {
-      clearInterval(refreshInterval)
       window.removeEventListener('focus', handleFocus)
     }
   }, [])
@@ -197,3 +192,4 @@ export default function VisitorDashboard() {
     </div>
   )
 }
+

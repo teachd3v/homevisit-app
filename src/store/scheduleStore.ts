@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 
 export interface Schedule {
   id: string
@@ -99,4 +99,5 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
     }
   },
 }))
+
 
