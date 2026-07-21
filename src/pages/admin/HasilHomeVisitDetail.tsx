@@ -1,30 +1,25 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useHomeVisitStore } from '../../store/homeVisitStore'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useVisitorStore } from '../../store/visitorStore'
+import { useHomeVisitResults, useUpdateHomeVisitResult } from '../../hooks/useHomeVisitResults';
+import { useCandidates } from '../../hooks/useCandidates'
+import { useVisitors } from '../../hooks/useVisitors'
 
 export default function HasilHomeVisitDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   
-  const results = useHomeVisitStore((state) => state.results)
-  const candidates = useCandidateStore((state) => state.candidates)
-  const visitors = useVisitorStore((state) => state.visitors)
-  const loadResults = useHomeVisitStore((state) => state.loadFromAPI)
+  const { data: results = [] } = useHomeVisitResults()
+  const { data: candidates = [] } = useCandidates()
+  const { data: visitors = [] } = useVisitors()
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [edits, setEdits] = useState<Record<string, { rating: number, note: string }>>({})
 
-  const updateResult = useHomeVisitStore((state) => state.updateResult)
+  const { mutateAsync: updateResult } = useUpdateHomeVisitResult()
 
   useEffect(() => {
-    if (results.length === 0) {
-      loadResults()
-    }
-    useCandidateStore.getState().loadFromAPI()
-    useVisitorStore.getState().loadFromAPI()
+    // No manual load needed anymore
   }, [])
 
   const result = results.find((r) => r.id === id)
@@ -50,9 +45,12 @@ export default function HasilHomeVisitDetail() {
 
     const totalScore = newAnswers.reduce((sum: number, item: any) => sum + (item.score || 0), 0)
     
-    await updateResult(result.id, {
-      answers: newAnswers,
-      score: totalScore,
+    await updateResult({
+      id: result.id,
+      updates: {
+        answers: newAnswers,
+        score: totalScore,
+      }
     })
 
     setIsEditing(false)
@@ -108,9 +106,10 @@ export default function HasilHomeVisitDetail() {
             </div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Fasil Visitor</h2>
-            <p className="text-xl font-black text-gray-900">{fasil?.name || fasil?.full_name || 'Memuat...'}</p>
+            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">PIC / Wilayah Observasi</h2>
+            <p className="text-xl font-black text-gray-900">{fasil?.region?.name || 'Memuat...'}</p>
             <div className="mt-2 space-y-1">
+              <p className="text-sm text-gray-600 flex items-center gap-2">🧑‍💼 Nama Visitor: <span className="font-semibold">{result.visitorName || '-'}</span></p>
               <p className="text-sm text-gray-600 flex items-center gap-2">📋 Role: {fasil?.role || '-'}</p>
               <p className="text-sm text-gray-600 flex items-center gap-2">🕒 Submit: {new Date(result.submittedAt).toLocaleString('id-ID')}</p>
             </div>
@@ -247,6 +246,8 @@ export default function HasilHomeVisitDetail() {
                 const photos = []
                 if (result.photos.tampakDepan) photos.push({ name: 'Tampak Depan', data: result.photos.tampakDepan })
                 if (result.photos.tampakDapur) photos.push({ name: 'Tampak Dapur', data: result.photos.tampakDapur })
+                if (result.photos.ruangTengah) photos.push({ name: 'Ruang Tengah', data: result.photos.ruangTengah })
+                if (result.photos.kamarMandi) photos.push({ name: 'Kamar Mandi', data: result.photos.kamarMandi })
                 if (result.photos.bersamaKeluarga) photos.push({ name: 'Bersama Keluarga', data: result.photos.bersamaKeluarga })
                 if (result.photos.beritaAcara) photos.push({ name: 'Berita Acara', data: result.photos.beritaAcara })
                 if (result.photos.formHomeVisit && result.photos.formHomeVisit.length > 0) {

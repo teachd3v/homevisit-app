@@ -1,20 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { useRegionStore } from '../../store/regionStore'
+import { useRegions, useCampuses, useAddRegion, useDeleteRegion, useUpdateRegion, useAddCampus, useDeleteCampus, useUpdateCampus } from '../../hooks/useRegions'
 import ConfirmModal from '../../components/ConfirmModal'
 
 export default function DataWilayah() {
-  const {
-    regions,
-    campuses,
-    loadFromAPI,
-    addRegion,
-    deleteRegion,
-    
-    addCampus,
-    deleteCampus,
-    updateCampus
-  } = useRegionStore()
+  const { data: regions = [] } = useRegions()
+  const { data: campuses = [] } = useCampuses()
+  const { mutateAsync: addRegion } = useAddRegion()
+  const { mutateAsync: deleteRegion } = useDeleteRegion()
+  const { mutateAsync: addCampus } = useAddCampus()
+  const { mutateAsync: deleteCampus } = useDeleteCampus()
+  const { mutateAsync: updateCampus } = useUpdateCampus()
 
   // Modals & Menu State
   const [showAddMenu, setShowAddMenu] = useState(false)
@@ -32,8 +28,6 @@ export default function DataWilayah() {
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, variant: 'danger'|'warning'|'info', confirmLabel: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', variant: 'danger', confirmLabel: '', onConfirm: () => {}})
 
   useEffect(() => {
-    loadFromAPI()
-
     // Click outside handler for floating add menu
     const clickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -82,7 +76,7 @@ export default function DataWilayah() {
       return
     }
 
-    await addCampus(trimmedSchool, selectedRegionId)
+    await addCampus({ name: trimmedSchool, regionId: selectedRegionId })
     triggerToast('Kampus berhasil ditambahkan')
     setSchoolName('')
     setSelectedRegionId('')
@@ -102,7 +96,7 @@ export default function DataWilayah() {
       return
     }
 
-    await updateCampus(editingSchoolId, trimmedSchool, selectedRegionId)
+    await updateCampus({id: editingSchoolId, name: trimmedSchool, regionId: selectedRegionId})
     triggerToast('Data kampus berhasil diperbarui')
     setSchoolName('')
     setSelectedRegionId('')

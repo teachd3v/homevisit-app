@@ -1,19 +1,20 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { useHomeVisitStore } from '../../store/homeVisitStore'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useVisitorStore } from '../../store/visitorStore'
-import { useRegionStore } from '../../store/regionStore'
+import { useHomeVisitResults, useAddHomeVisitResult, useUpdateHomeVisitResult, useDeleteHomeVisitResult } from '../../hooks/useHomeVisitResults';
+import type { HomeVisitResult } from '../../types'
+import { useCandidates, useDeleteCandidate, useUpdateCandidate, useAddCandidate, useUpdatePantukhirStatus, useUpdateHomeVisitStatus, useBulkUpdateHomeVisitStatus, useBulkAddCandidates } from '../../hooks/useCandidates'
+import { useVisitors, useDeleteVisitor, useUpdateVisitor, useAddVisitor, useBulkAddVisitors } from '../../hooks/useVisitors'
+import { useRegions, useCampuses, useAddRegion, useDeleteRegion, useUpdateRegion, useAddCampus, useDeleteCampus, useUpdateCampus } from '../../hooks/useRegions'
 import ConfirmModal from '../../components/ConfirmModal'
 
 export default function HasilHomeVisit() {
   const navigate = useNavigate()
-  const results = useHomeVisitStore((state) => state.results)
-  const candidates = useCandidateStore((state) => state.candidates)
-  const visitors = useVisitorStore((state) => state.visitors)
-  const regions = useRegionStore((state) => state.regions)
-  const deleteResult = useHomeVisitStore((state) => state.deleteResult)
+  const { data: results = [] } = useHomeVisitResults()
+  const { data: candidates = [] } = useCandidates()
+  const { data: visitors = [] } = useVisitors()
+  const { data: regions = [] } = useRegions()
+  const { mutateAsync: deleteResult } = useDeleteHomeVisitResult()
 
   const [searchTerm, setSearchBar] = useState('')
   const [filterRegion, setFilterRegion] = useState('all')
@@ -22,10 +23,10 @@ export default function HasilHomeVisit() {
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}})
 
   useEffect(() => {
-    useHomeVisitStore.getState().loadFromAPI()
-    useCandidateStore.getState().loadFromAPI()
-    useVisitorStore.getState().loadFromAPI()
-    useRegionStore.getState().loadFromAPI()
+    
+    
+    
+    
   }, [])
 
   const getCandidateName = (id: string) => {
@@ -48,8 +49,10 @@ export default function HasilHomeVisit() {
     return candidates.find((c) => c.id === id)?.major || '-'
   }
 
-  const getVisitorName = (fasilId: string) => {
-    return visitors.find(i => i.id === fasilId)?.name || '-'
+  const getVisitorName = (result: any) => {
+    const v = visitors.find(i => i.id === result.fasilId)
+    const roleName = v?.role ? v.role.toUpperCase() : 'FASIL'
+    return result.visitorName ? `${roleName} (${result.visitorName})` : roleName
   }
 
   const formatDate = (dateString: string) => {
@@ -68,7 +71,7 @@ export default function HasilHomeVisit() {
   // Filter logic
   const filteredResults = results.filter((result) => {
     const candidateName = getCandidateName(result.candidateId).toLowerCase()
-    const fasilName = getVisitorName(result.fasilId).toLowerCase()
+    const fasilName = getVisitorName(result).toLowerCase()
     const region = getCandidateRegion(result.candidateId)
     
     const matchesSearch = candidateName.includes(searchTerm.toLowerCase()) || 
@@ -108,7 +111,7 @@ export default function HasilHomeVisit() {
         getCandidateSchool(r.candidateId),
         getCandidateMajor(r.candidateId),
         getCandidateRegion(r.candidateId),
-        getVisitorName(r.fasilId),
+        getVisitorName(r),
         getLikertScore(r).toFixed(1),
         formatDate(r.submittedAt),
       ]),
@@ -276,7 +279,7 @@ export default function HasilHomeVisit() {
                     return (
                       <tr key={r.id} className="hover:bg-slate-50/55 transition-colors">
                         <td className="px-6 py-4 text-xs font-extrabold text-slate-800">
-                          {getVisitorName(r.fasilId)}
+                          {getVisitorName(r)}
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-extrabold text-xs text-slate-800">{cName}</p>
@@ -327,7 +330,7 @@ export default function HasilHomeVisit() {
             </div>
           ) : (
             Object.entries(groupedByVisitor).map(([fasilId, visitorResults]) => {
-              const visitorName = getVisitorName(fasilId)
+              const visitorName = getVisitorName(visitorResults[0])
               const isExpanded = expandedVisitors.includes(fasilId)
               const count = visitorResults.length
 

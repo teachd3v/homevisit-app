@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useHomeVisitStore } from '../../store/homeVisitStore'
-import { useVisitorStore } from '../../store/visitorStore'
+import { useCandidates, useUpdatePantukhirStatus } from '../../hooks/useCandidates'
+import { useHomeVisitResults } from '../../hooks/useHomeVisitResults'
+import { useVisitors } from '../../hooks/useVisitors'
 
 export default function HasilAkhir() {
-  const candidates = useCandidateStore((state) => state.candidates)
-  const results = useHomeVisitStore((state) => state.results)
-  const visitors = useVisitorStore((state) => state.visitors)
-  const loadCandidates = useCandidateStore((state) => state.loadFromAPI)
-  const loadResults = useHomeVisitStore((state) => state.loadFromAPI)
-  const loadVisitors = useVisitorStore((state) => state.loadFromAPI)
-  const updatePantukhirStatus = useCandidateStore((state) => state.updatePantukhirStatus)
+  const { data: candidates = [] } = useCandidates()
+  const { data: results = [] } = useHomeVisitResults()
+  const { data: visitors = [] } = useVisitors()
+  
+  const { mutateAsync: updatePantukhirStatus } = useUpdatePantukhirStatus()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRegion, setSelectedRegion] = useState('All')
@@ -34,13 +32,13 @@ export default function HasilAkhir() {
   }
 
   useEffect(() => {
-    loadCandidates()
-    loadResults()
-    loadVisitors()
+    // Data is loaded automatically via React Query
   }, [])
 
-  const getVisitorName = (id: string) => {
-    return visitors.find(i => i.id === id)?.name || '-'
+  const getVisitorName = (result: any) => {
+    const v = visitors.find((i) => i.id === result.fasilId)
+    const roleName = v?.role ? v.role.toUpperCase() : 'FASIL'
+    return result.visitorName ? `${roleName} (${result.visitorName})` : roleName
   }
 
   const getLikertScore = (r: any) => {
@@ -58,7 +56,7 @@ export default function HasilAkhir() {
   const uniqueRegions = Array.from(new Set(candidates.map(c => c.region || 'Lainnya'))).sort()
 
   const handleAction = async (candidateId: string, status: 'lolos' | 'gagal' | null) => {
-    await updatePantukhirStatus(candidateId, status)
+    await updatePantukhirStatus({id: candidateId, status: status})
     setActionModalOpen(null)
   }
 
@@ -162,7 +160,7 @@ export default function HasilAkhir() {
                           <div className="mt-4 pt-3 border-t border-slate-100 space-y-3">
                             <div className="flex justify-between items-center">
                               <span className="text-xs text-slate-500">Visitor:</span>
-                              <span className="text-xs font-semibold text-slate-800">{result ? getVisitorName(result.fasilId) : '-'}</span>
+                              <span className="text-xs font-semibold text-slate-800">{result ? getVisitorName(result) : '-'}</span>
                             </div>
                             <div className="flex justify-between items-center">
                               <span className="text-xs text-slate-500">Skor:</span>
@@ -246,7 +244,7 @@ export default function HasilAkhir() {
                         {candidate.region || 'Lainnya'}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
-                        {result ? getVisitorName(result.fasilId) : '-'}
+                        {result ? getVisitorName(result) : '-'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1.5 items-start">
@@ -393,6 +391,8 @@ export default function HasilAkhir() {
                   if (res.photos) {
                     if (res.photos.tampakDepan) photos.push({ name: 'Tampak Depan Rumah', data: res.photos.tampakDepan })
                     if (res.photos.tampakDapur) photos.push({ name: 'Tampak Dapur', data: res.photos.tampakDapur })
+                    if (res.photos.ruangTengah) photos.push({ name: 'Ruang Tengah', data: res.photos.ruangTengah })
+                    if (res.photos.kamarMandi) photos.push({ name: 'Kamar Mandi', data: res.photos.kamarMandi })
                     if (res.photos.bersamaKeluarga) photos.push({ name: 'Bersama Keluarga', data: res.photos.bersamaKeluarga })
                     if (res.photos.beritaAcara) photos.push({ name: 'Berita Acara', data: res.photos.beritaAcara })
                     if (res.photos.formHomeVisit && res.photos.formHomeVisit.length > 0) {

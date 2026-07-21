@@ -1,5 +1,5 @@
-﻿import { create } from 'zustand'
-import { Instrument } from './instrumentStore'
+import { create } from 'zustand'
+import { Instrument } from '../types'
 
 export interface AnswerIndicator {
   id: string

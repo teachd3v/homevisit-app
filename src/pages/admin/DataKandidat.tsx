@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useRegionStore } from '../../store/regionStore'
+import { useCandidates, useDeleteCandidate, useUpdateCandidate, useAddCandidate, useUpdatePantukhirStatus, useUpdateHomeVisitStatus, useBulkUpdateHomeVisitStatus, useBulkAddCandidates } from '../../hooks/useCandidates'
+import { useRegions, useCampuses, useAddRegion, useDeleteRegion, useUpdateRegion, useAddCampus, useDeleteCampus, useUpdateCampus } from '../../hooks/useRegions'
 
 import ConfirmModal from '../../components/ConfirmModal'
 
@@ -20,10 +20,13 @@ export default function DataKandidat() {
   const [expandedIds, setExpandedIds] = useState<string[]>([])
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}})
 
-  const candidates = useCandidateStore((state) => state.candidates)
-  const deleteCandidate = useCandidateStore((state) => state.deleteCandidate)
-  const updateCandidate = useCandidateStore((state) => state.updateCandidate)
-  const addCandidate = useCandidateStore((state) => state.addCandidate)
+  const { data: candidates = [] } = useCandidates()
+  const { mutateAsync: deleteCandidate } = useDeleteCandidate()
+  const { mutateAsync: updateCandidate } = useUpdateCandidate()
+  const { mutateAsync: addCandidate } = useAddCandidate()
+  
+  const { data: regionsList = [] } = useRegions()
+  const { data: campusesList = [] } = useCampuses()
 
 
   const toggleExpand = (id: string) => {
@@ -33,14 +36,14 @@ export default function DataKandidat() {
   }
 
   useEffect(() => {
-    useCandidateStore.getState().loadFromAPI()
-    useRegionStore.getState().loadFromAPI()
+    
+    
   }, [])
 
   const filteredCandidates = (filterRegion
     ? candidates.filter((c) => c.region === filterRegion)
     : candidates
-  ).sort((a, b) => a.id.localeCompare(b.id))
+  ).sort((a, b) => String(a.id).localeCompare(String(b.id)))
 
   const regions = [...new Set(candidates.map((c) => c.region))]
 
@@ -278,9 +281,11 @@ export default function DataKandidat() {
       {editingId && (
         <EditCandidateModal
           candidate={candidates.find((c) => c.id === editingId)!}
+          regions={regionsList}
+          campuses={campusesList}
           onClose={() => setEditingId(null)}
           onUpdate={async (id, updates) => {
-            await updateCandidate(id, updates)
+            await updateCandidate({id: id, updates: updates})
             setToast({ message: 'Data kandidat berhasil diperbarui', type: 'success' })
             setTimeout(() => setToast(null), 3000)
           }}
@@ -301,6 +306,8 @@ export default function DataKandidat() {
           <AddCandidateModal
             onClose={() => setShowAddForm(false)}
             suggestedId={suggestedId}
+            regions={regionsList}
+            campuses={campusesList}
             onAdd={async (cData) => {
               await addCandidate(cData)
               setToast({ message: 'Kandidat baru berhasil ditambahkan', type: 'success' })
@@ -325,11 +332,13 @@ export default function DataKandidat() {
 
 interface EditCandidateModalProps {
   candidate: any
+  regions: any[]
+  campuses: any[]
   onClose: () => void
   onUpdate: (id: string, updates: any) => Promise<void>
 }
 
-function EditCandidateModal({ candidate, onClose, onUpdate }: EditCandidateModalProps) {
+function EditCandidateModal({ candidate, regions: regionsList, campuses: campusesList, onClose, onUpdate }: EditCandidateModalProps) {
   const [full_name, setFull_name] = useState(candidate.full_name)
   const [campus, setSchool] = useState(candidate.campus)
   const [region, setRegion] = useState(candidate.region)
@@ -387,7 +396,7 @@ function EditCandidateModal({ candidate, onClose, onUpdate }: EditCandidateModal
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
             >
               <option value="">Pilih Wilayah</option>
-              {useRegionStore.getState().regions.map((r) => (
+              {regionsList.map((r) => (
                 <option key={r.id} value={r.name}>{r.name}</option>
               ))}
             </select>
@@ -403,9 +412,9 @@ function EditCandidateModal({ candidate, onClose, onUpdate }: EditCandidateModal
             >
               <option value="">{region ? 'Pilih Kampus' : 'Pilih Wilayah Terlebih Dahulu'}</option>
               {(() => {
-                const regObj = useRegionStore.getState().regions.find(r => r.name === region)
+                const regObj = regionsList.find(r => r.name === region)
                 const filtered = regObj
-                  ? useRegionStore.getState().campuses.filter(s => s.regionId === regObj.id)
+                  ? campusesList.filter(s => s.regionId === regObj.id)
                   : []
                 return filtered.map((s) => (
                   <option key={s.id} value={s.name}>{s.name}</option>
@@ -474,9 +483,11 @@ interface AddCandidateModalProps {
   onClose: () => void
   onAdd: (candidate: any) => Promise<void>
   suggestedId: string
+  regions: any[]
+  campuses: any[]
 }
 
-function AddCandidateModal({ onClose, onAdd, suggestedId }: AddCandidateModalProps) {
+function AddCandidateModal({ onClose, onAdd, suggestedId, regions: regionsList, campuses: campusesList }: AddCandidateModalProps) {
   const [id, setId] = useState(suggestedId)
   const [full_name, setFull_name] = useState('')
   const [campus, setSchool] = useState('')
@@ -548,7 +559,7 @@ function AddCandidateModal({ onClose, onAdd, suggestedId }: AddCandidateModalPro
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-xs"
             >
               <option value="">Pilih Wilayah</option>
-              {useRegionStore.getState().regions.map((r) => (
+              {regionsList.map((r) => (
                 <option key={r.id} value={r.name}>{r.name}</option>
               ))}
             </select>
@@ -564,9 +575,9 @@ function AddCandidateModal({ onClose, onAdd, suggestedId }: AddCandidateModalPro
             >
               <option value="">{region ? 'Pilih Kampus' : 'Pilih Wilayah Terlebih Dahulu'}</option>
               {(() => {
-                const regObj = useRegionStore.getState().regions.find(r => r.name === region)
+                const regObj = regionsList.find(r => r.name === region)
                 const filtered = regObj
-                  ? useRegionStore.getState().campuses.filter(s => s.regionId === regObj.id)
+                  ? campusesList.filter(s => s.regionId === regObj.id)
                   : []
                 return filtered.map((s) => (
                   <option key={s.id} value={s.name}>{s.name}</option>

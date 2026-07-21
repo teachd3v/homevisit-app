@@ -10,7 +10,7 @@ Sistem wawancara LPDP dengan fokus pada UI/UX testing di localhost.
 - **Tailwind CSS** - Styling
 - **React Router v6** - Routing
 - **Zustand** - State management
-- **Supabase** - Backend & Database
+- **Express + Prisma + Neon (PostgreSQL)** - Backend & Database
 
 ## Struktur Folder
 
@@ -36,8 +36,6 @@ src/
 │   ├── instrumentStore.ts
 │   ├── formStore.ts
 │   └── formResultsStore.ts
-├── lib/
-│   └── supabase.ts
 ├── utils/
 │   └── excelParser.ts
 └── App.tsx
@@ -75,19 +73,18 @@ npm run preview
   - Step 3: Catatan Tambahan
   - Step 4: Review & Submit
 - ✅ 20-minute countdown timer
-- ✅ Results saved to Supabase
+- ✅ Results saved to PostgreSQL via Express API
 - ✅ Completion status on dashboard
 
 ## Environment Variables
 
 ```
-VITE_SUPABASE_URL=https://rzzdinkudokfekolbhut.supabase.co
-VITE_SUPABASE_KEY=eyJhbGc... (dari .env.local)
+VITE_API_URL=http://localhost:3000
 ```
 
 ## Development Notes
 
 - State management menggunakan Zustand
-- All data persisted di Supabase PostgreSQL
+- All data persisted di PostgreSQL (Neon) via Express API
 - Styling menggunakan Tailwind CSS
 - Role-based routing (admin, pusat, cabang, mentor)

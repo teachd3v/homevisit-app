@@ -1,5 +1,5 @@
-﻿import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
+import { create } from 'zustand'
+import { api } from '../lib/api'
 
 export interface FormResult {
   id: string
@@ -37,7 +37,6 @@ interface FormResultsStore {
   getResultsByCandidate: (candidateId: string) => FormResult[]
   getResultsBySchedule: (scheduleId: string) => FormResult[]
   loadFromAPI: () => Promise<void>
-
 }
 
 export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
@@ -49,48 +48,23 @@ export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
 
   loadFromAPI: async () => {
     try {
-      const { data, error } = await supabase
-        .from('assessment_results')
-        .select(`
-          id,
-          candidate_id,
-          visitor_id,
-          schedule_id,
-          submitted_at,
-          part_a_results,
-          part_a_pass,
-          part_b_results,
-          part_b_total,
-          part_b_percentage,
-          notes,
-          candidates(full_name)
-        `)
-        .order('submitted_at', { ascending: false })
+      const { data } = await api.get('/results')
 
-      if (error) {
-        console.error('Error loading results:', error)
-        return
-      }
-
-      // Map database fields ke format app
-      const mappedData = (data || []).map((item: any) => {
-        const mapped = {
-          id: item.id,
-          candidateId: item.candidate_id,
-          visitorId: item.visitor_id || '',
-          candidateName: item.candidates?.full_name || 'Unknown',
-          scheduleId: item.schedule_id,
-          interviewDate: new Date(item.submitted_at).toISOString().split('T')[0],
-          submittedAt: item.submitted_at,
-          partA: item.part_a_results || [],
-          partB: item.part_b_results || [],
-          notes: item.notes || '',
-          partAPass: item.part_a_pass,
-          partBTotal: item.part_b_total || 0,
-          partBPercentage: item.part_b_percentage || 0,
-        }
-        return mapped
-      })
+      const mappedData = data.map((item: any) => ({
+        id: item.id,
+        candidateId: item.candidateId,
+        visitorId: item.fasilId || '',
+        candidateName: item.candidate?.full_name || 'Unknown',
+        scheduleId: item.scheduleId || '', 
+        interviewDate: new Date(item.createdAt || Date.now()).toISOString().split('T')[0],
+        submittedAt: item.createdAt || new Date().toISOString(),
+        partA: item.answers?.partA || [],
+        partB: item.answers?.partB || [],
+        notes: item.notes || '',
+        partAPass: item.answers?.partAPass ?? true,
+        partBTotal: item.score || 0,
+        partBPercentage: item.score || 0,
+      }))
 
       set({ results: mappedData })
     } catch (error) {
@@ -101,68 +75,48 @@ export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
   addResult: async (result) => {
     try {
       const dbPayload = {
-        candidate_id: result.candidateId,
-        visitor_id: result.visitorId,
-        schedule_id: result.scheduleId,
-        submitted_at: result.submittedAt,
-        part_a_results: result.partA,
-        part_a_pass: result.partAPass,
-        part_b_results: result.partB,
-        part_b_total: result.partBTotal,
-        part_b_percentage: result.partBPercentage,
+        candidateId: result.candidateId,
+        fasilId: result.visitorId,
+        answers: {
+          partA: result.partA,
+          partB: result.partB,
+          partAPass: result.partAPass
+        },
+        score: result.partBTotal,
+        status: 'submitted',
         notes: result.notes,
       }
 
-      const { data, error } = await supabase
-        .from('assessment_results')
-        .insert([dbPayload])
-        .select()
+      const { data: savedData } = await api.post('/results', dbPayload)
 
-      if (error) {
-        console.error('âŒ Error adding result:', error)
-        alert(`âŒ Error menyimpan hasil: ${error.message}`)
-        return
+      const newResult: FormResult = {
+        id: savedData.id,
+        candidateId: savedData.candidateId,
+        visitorId: savedData.fasilId || '',
+        candidateName: result.candidateName,
+        scheduleId: result.scheduleId,
+        interviewDate: result.interviewDate,
+        submittedAt: savedData.createdAt || new Date().toISOString(),
+        partA: savedData.answers?.partA || [],
+        partB: savedData.answers?.partB || [],
+        notes: savedData.notes || '',
+        partAPass: savedData.answers?.partAPass ?? true,
+        partBTotal: savedData.score || 0,
+        partBPercentage: savedData.score || 0,
       }
 
-      if (data && data.length > 0) {
-        const newResult = {
-          id: data[0].id,
-          candidateId: data[0].candidate_id,
-          visitorId: data[0].visitor_id,
-          candidateName: result.candidateName,
-          scheduleId: data[0].schedule_id,
-          interviewDate: result.interviewDate,
-          submittedAt: data[0].submitted_at,
-          partA: data[0].part_a_results || [],
-          partB: data[0].part_b_results || [],
-          notes: data[0].notes || '',
-          partAPass: data[0].part_a_pass,
-          partBTotal: data[0].part_b_total || 0,
-          partBPercentage: data[0].part_b_percentage || 0,
-        }
-
-        set((state) => ({
-          results: [newResult, ...state.results],
-        }))
-      }
-    } catch (error) {
-      console.error('âŒ Failed to add result:', error)
-      alert(`Error: ${(error as any).message}`)
+      set((state) => ({
+        results: [newResult, ...state.results],
+      }))
+    } catch (error: any) {
+      console.error('Failed to add result:', error)
+      alert(`Error: ${error.message}`)
     }
   },
 
   updateNotes: async (id, notes) => {
     try {
-      const { error } = await supabase
-        .from('assessment_results')
-        .update({ notes })
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error updating notes:', error)
-        alert('Gagal mengupdate catatan')
-        return
-      }
+      await api.put(`/results/${id}`, { notes })
 
       set((state) => ({
         results: state.results.map((r) => (r.id === id ? { ...r, notes } : r)),
@@ -175,24 +129,16 @@ export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
   updateResult: async (id, updates) => {
     try {
       const dbPayload = {
-        part_a_results: updates.partA,
-        part_a_pass: updates.partAPass,
-        part_b_results: updates.partB,
-        part_b_total: updates.partBTotal,
-        part_b_percentage: updates.partBPercentage,
+        answers: {
+          partA: updates.partA,
+          partB: updates.partB,
+          partAPass: updates.partAPass
+        },
+        score: updates.partBTotal,
         notes: updates.notes,
       }
 
-      const { error } = await supabase
-        .from('assessment_results')
-        .update(dbPayload)
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error updating result:', error)
-        alert(`Gagal mengupdate hasil: ${error.message}`)
-        return
-      }
+      await api.put(`/results/${id}`, dbPayload)
 
       set((state) => ({
         results: state.results.map((r) => (r.id === id ? { ...r, ...updates } : r)),
@@ -204,23 +150,14 @@ export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
 
   deleteResult: async (id) => {
     try {
-      const { error } = await supabase
-        .from('assessment_results')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error deleting result:', error)
-        alert(`Gagal menghapus data hasil: ${error.message}`)
-        return
-      }
+      await api.delete(`/results/${id}`)
 
       set((state) => ({
         results: state.results.filter((r) => r.id !== id),
       }))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete result:', error)
-      alert(`Error: ${(error as any).message}`)
+      alert(`Error: ${error.message}`)
     }
   },
 
@@ -232,4 +169,3 @@ export const useFormResultsStore = create<FormResultsStore>((set, get) => ({
     return get().results.filter((r) => r.scheduleId === scheduleId)
   },
 }))
-

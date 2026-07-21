@@ -1,9 +1,10 @@
-﻿import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useScheduleStore, Schedule } from '../../store/scheduleStore'
-import { useRegionStore } from '../../store/regionStore'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useVisitorStore } from '../../store/visitorStore'
+import { useSchedules, useBulkAddSchedules, useDeleteSchedule } from '../../hooks/useSchedules'
+import { useRegions, useCampuses, useAddRegion, useDeleteRegion, useUpdateRegion, useAddCampus, useDeleteCampus, useUpdateCampus } from '../../hooks/useRegions'
+import { useCandidates, useDeleteCandidate, useUpdateCandidate, useAddCandidate, useUpdatePantukhirStatus, useUpdateHomeVisitStatus, useBulkUpdateHomeVisitStatus, useBulkAddCandidates } from '../../hooks/useCandidates'
+import { useVisitors, useDeleteVisitor, useUpdateVisitor, useAddVisitor, useBulkAddVisitors } from '../../hooks/useVisitors'
+import { Schedule } from '../../types'
 
 import ConfirmModal from '../../components/ConfirmModal'
 
@@ -25,25 +26,25 @@ export default function JadwalHomeVisit() {
   })
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
 
-  const allSchedules = useScheduleStore((state) => state.schedules)
+  const { data: allSchedules = [] } = useSchedules()
   
-  const bulkAddSchedules = useScheduleStore((state) => state.bulkAddSchedules)
-  const deleteSchedule = useScheduleStore((state) => state.deleteSchedule)
+  const { mutateAsync: bulkAddSchedules } = useBulkAddSchedules()
+  const { mutateAsync: deleteSchedule } = useDeleteSchedule()
 
-  const candidates = useCandidateStore((state) => state.candidates)
-  const visitors = useVisitorStore((state) => state.visitors)
-  const regions = useRegionStore((state) => state.regions)
+  const { data: candidates = [] } = useCandidates()
+  const { data: visitors = [] } = useVisitors()
+  const { data: regions = [] } = useRegions()
 
   useEffect(() => {
-    useRegionStore.getState().loadFromAPI()
-    useCandidateStore.getState().loadFromAPI()
-    useScheduleStore.getState().loadFromAPI()
-    useVisitorStore.getState().loadFromAPI()
+    
+    
+    
+    
   }, [])
 
   // Group schedules by visitor
   const groupedSchedules = Object.values(
-    allSchedules.reduce((acc, sch) => {
+    allSchedules.reduce((acc: Record<string, { visitorId: string, schedules: Schedule[] }>, sch) => {
       if (!acc[sch.visitorId]) acc[sch.visitorId] = { visitorId: sch.visitorId, schedules: [] }
       acc[sch.visitorId].schedules.push(sch)
       return acc
@@ -141,9 +142,8 @@ export default function JadwalHomeVisit() {
   }
 
   const getVisitorName = (id: string | undefined) => {
-    if (!id) return 'Belum ditentukan'
     const v = visitors.find((i) => i.id === id)
-    return v?.name || v?.full_name || `Visitor ${id}`
+    return v?.region?.name || `Visitor ${id}`
   }
 
   const getVisitorRole = (id: string | undefined) => {
@@ -212,7 +212,7 @@ export default function JadwalHomeVisit() {
               <table className="w-full">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Nama Visitor</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Wilayah Visitor</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Peran</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Kandidat Observasi</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900 w-32">Aksi</th>
@@ -399,7 +399,7 @@ export default function JadwalHomeVisit() {
                   <option value="">-- Pilih Visitor --</option>
                   {visitors.map((visitor) => (
                     <option key={visitor.id} value={visitor.id}>
-                      {visitor.name || visitor.full_name} ({visitor.role.toUpperCase()})
+                      {visitor.region?.name || 'Tidak ada wilayah'} ({visitor.role.toUpperCase()})
                     </option>
                   ))}
                 </select>

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore'
-import { useVisitorStore } from '../../store/visitorStore'
+import { useVisitors, useDeleteVisitor, useUpdateVisitor, useAddVisitor, useBulkAddVisitors } from '../../hooks/useVisitors'
 
 const roleEmojis: { [key: string]: string } = {
   etoser: '🧑‍🎓',
@@ -20,10 +20,10 @@ export default function VisitorSelectPage() {
   const role = useAuthStore((state) => state.role)
   const setVisitor = useAuthStore((state) => state.setVisitor)
 
-  const visitors = useVisitorStore((state) => state.visitors)
+  const { data: visitors = [] } = useVisitors()
 
   useEffect(() => {
-    useVisitorStore.getState().loadFromAPI()
+    
   }, [])
 
   useEffect(() => {
@@ -90,12 +90,12 @@ export default function VisitorSelectPage() {
             {filteredVisitors.map((visitor) => (
               <button
                 key={visitor.id}
-                onClick={() => handleSelectVisitor(visitor.id, visitor.name || visitor.full_name || "")}
+                onClick={() => handleSelectVisitor(visitor.id, visitor.region?.name || "Tanpa Wilayah")}
                 className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 hover:shadow-lg hover:border-emerald-400 transition-all text-left flex flex-col justify-between"
               >
                 <div>
                   <div className="text-2xl md:text-4xl mb-2 md:mb-4">{roleEmojis[visitor.role]}</div>
-                  <h3 className="text-sm md:text-lg font-bold text-gray-900 line-clamp-2 leading-tight">{visitor.full_name || visitor.name}</h3>
+                  <h3 className="text-sm md:text-lg font-bold text-gray-900 line-clamp-2 leading-tight">{visitor.region?.name || "Tanpa Wilayah"}</h3>
                   <p className="text-[10px] md:text-sm text-gray-500 mt-1">
                     ID: {visitor.id}
                   </p>

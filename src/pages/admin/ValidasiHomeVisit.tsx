@@ -1,18 +1,18 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { useCandidateStore } from '../../store/candidateStore'
+import { useCandidates, useDeleteCandidate, useUpdateCandidate, useAddCandidate, useUpdatePantukhirStatus, useUpdateHomeVisitStatus, useBulkUpdateHomeVisitStatus, useBulkAddCandidates } from '../../hooks/useCandidates'
 import { useFormResultsStore } from '../../store/formResultsStore'
-import { useRegionStore } from '../../store/regionStore'
+import { useRegions, useCampuses, useAddRegion, useDeleteRegion, useUpdateRegion, useAddCampus, useDeleteCampus, useUpdateCampus } from '../../hooks/useRegions'
 import ConfirmModal from '../../components/ConfirmModal'
 
 export default function ValidasiHomeVisit() {
   const navigate = useNavigate()
-  const candidates = useCandidateStore((state) => state.candidates)
+  const { data: candidates = [] } = useCandidates()
   const results = useFormResultsStore((state) => state.results)
-  const regions = useRegionStore((state) => state.regions)
+  const { data: regions = [] } = useRegions()
   
-  const updateStatus = useCandidateStore((state) => state.updateHomeVisitStatus)
-  const bulkUpdateStatus = useCandidateStore((state) => state.bulkUpdateHomeVisitStatus)
+  const { mutateAsync: updateStatus } = useUpdateHomeVisitStatus()
+  const { mutateAsync: bulkUpdateStatus } = useBulkUpdateHomeVisitStatus()
 
   const [searchTerm, setSearchBar] = useState('')
   const [filterRegion, setFilterRegion] = useState('all')
@@ -20,9 +20,9 @@ export default function ValidasiHomeVisit() {
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, variant: 'danger'|'warning'|'info', confirmLabel: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', variant: 'info', confirmLabel: '', onConfirm: () => {}})
 
   useEffect(() => {
-    useCandidateStore.getState().loadFromAPI()
+    
     useFormResultsStore.getState().loadFromAPI()
-    useRegionStore.getState().loadFromAPI()
+    
   }, [])
 
   // Filter kandidat yang sudah 3x interview (atau 2x untuk Pidie Jaya) dan lulus Part A
@@ -68,7 +68,7 @@ export default function ValidasiHomeVisit() {
       variant: 'info',
       confirmLabel: 'Ya, Loloskan',
       onConfirm: async () => {
-        await bulkUpdateStatus(selectedIds, 'lolos')
+        await bulkUpdateStatus({ids: selectedIds, status: 'lolos'})
         setSelectedIds([])
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
       }
@@ -84,7 +84,7 @@ export default function ValidasiHomeVisit() {
       variant: 'danger',
       confirmLabel: 'Ya, Gugurkan',
       onConfirm: async () => {
-        await bulkUpdateStatus(selectedIds, 'gagal')
+        await bulkUpdateStatus({ids: selectedIds, status: 'gagal'})
         setSelectedIds([])
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
       }
@@ -227,14 +227,14 @@ export default function ValidasiHomeVisit() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => updateStatus(c.id, 'gagal')}
+                            onClick={() => updateStatus({id: c.id, status: 'gagal'})}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Gugurkan"
                           >
                             <span className="text-xl">✗</span>
                           </button>
                           <button
-                            onClick={() => updateStatus(c.id, 'lolos')}
+                            onClick={() => updateStatus({id: c.id, status: 'lolos'})}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Loloskan ke Home Visit"
                           >

@@ -4,12 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
-}model Region {
+}
+
+model Region {
   id         String      @id @default(uuid())
   name       String      @unique
   campuses   Campus[]
   candidates Candidate[]
+  visitors   Visitor[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 }
@@ -24,28 +26,29 @@ model Campus {
 }
 
 model Candidate {
-  id        String            @id
-  full_name String
-  gender    String
-  region    String
-  campus    String
-  major     String
-  ukt       String?
-  home_visit_status String? @default("pending")
+  id                String            @id
+  full_name         String
+  gender            String
+  region            String
+  campus            String
+  major             String
+  ukt               String?
+  home_visit_status String?           @default("pending")
   pantukhir_status  String?
-  regionRel Region?           @relation(fields: [region], references: [name], onDelete: SetNull)
-  schedules Schedule[]
-  results   HomeVisitResult[]
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  regionRel         Region?           @relation(fields: [region], references: [name], onDelete: SetNull)
+  schedules         Schedule[]
+  results           HomeVisitResult[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Visitor {
   id        String            @id
-  name      String
+  regionId  String
   role      String            @default("fasil")
   schedules Schedule[]
   results   HomeVisitResult[]
+  region    Region            @relation(fields: [regionId], references: [id], onDelete: Cascade)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 }
@@ -53,6 +56,7 @@ model Visitor {
 model Instrument {
   id         String   @id @default(uuid())
   pertanyaan String
+  type       String   @default("likert")
   urutan     Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -76,6 +80,7 @@ model HomeVisitResult {
   id          String    @id @default(uuid())
   candidateId String
   fasilId     String
+  visitorName String?
   submittedAt DateTime  @default(now())
   answers     Json
   score       Float
@@ -87,5 +92,3 @@ model HomeVisitResult {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
-
-

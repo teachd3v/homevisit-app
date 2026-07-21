@@ -10,10 +10,10 @@ import {
   downloadInstrumentTemplate,
   downloadScheduleTemplate,
 } from '../utils/excelParser'
-import { useCandidateStore } from '../store/candidateStore'
-import { useVisitorStore } from '../store/visitorStore'
-import { useInstrumentStore } from '../store/instrumentStore'
-import { useScheduleStore } from '../store/scheduleStore'
+import { useCandidates, useDeleteCandidate, useUpdateCandidate, useAddCandidate, useUpdatePantukhirStatus, useUpdateHomeVisitStatus, useBulkUpdateHomeVisitStatus, useBulkAddCandidates } from '../hooks/useCandidates'
+import { useVisitors, useDeleteVisitor, useUpdateVisitor, useAddVisitor, useBulkAddVisitors } from '../hooks/useVisitors'
+import { useInstruments, useDeleteInstrument, useUpdateInstrument, useAddInstrument, useBulkAddInstruments } from '../hooks/useInstruments'
+import { useSchedules, useDeleteSchedule, useUpdateSchedule, useAddSchedule, useBulkAddSchedules } from '../hooks/useSchedules'
 
 interface BulkImportModalProps {
   onClose: () => void
@@ -35,16 +35,16 @@ export default function BulkImportModal({ onClose }: BulkImportModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 
-  const bulkAddCandidates = useCandidateStore((state) => state.bulkAddCandidates)
-  const candidates = useCandidateStore((state) => state.candidates)
+  const { mutateAsync: bulkAddCandidates } = useBulkAddCandidates()
+  const { data: candidates = [] } = useCandidates()
 
-  const bulkAddVisitors = useVisitorStore((state) => state.bulkAddVisitors)
-  const visitors = useVisitorStore((state) => state.visitors)
+  const { mutateAsync: bulkAddVisitors } = useBulkAddVisitors()
+  const { data: visitors = [] } = useVisitors()
 
-  const bulkAddInstruments = useInstrumentStore((state) => state.bulkAddInstruments)
-  const instruments = useInstrumentStore((state) => state.instruments)
+  const { mutateAsync: bulkAddInstruments } = useBulkAddInstruments()
+  const { data: instruments = [] } = useInstruments()
 
-  const bulkAddSchedules = useScheduleStore((state) => state.bulkAddSchedules)
+  const { mutateAsync: bulkAddSchedules } = useBulkAddSchedules()
 
   // Handle file preview untuk candidates
   const handleCandidateFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

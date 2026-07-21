@@ -1,11 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
-import { useScheduleStore } from '../../store/scheduleStore'
-import { useCandidateStore } from '../../store/candidateStore'
-import { useVisitorStore } from '../../store/visitorStore'
-import { useRegionStore } from '../../store/regionStore'
-import { useHomeVisitStore } from '../../store/homeVisitStore'
+import { useSchedules } from '../../hooks/useSchedules'
+import { useCandidates } from '../../hooks/useCandidates'
+import { useHomeVisitResults } from '../../hooks/useHomeVisitResults'
 
 export default function VisitorDashboard() {
   const navigate = useNavigate()
@@ -14,23 +12,17 @@ export default function VisitorDashboard() {
   const visitorId = useAuthStore((state) => state.visitorId)
   const visitorName = useAuthStore((state) => state.visitorName)
 
-  const allSchedules = useScheduleStore((state) => state.schedules)
-  const candidates = useCandidateStore((state) => state.candidates)
-  
-  
-  const homeVisitResults = useHomeVisitStore((state) => state.results)
+  const { data: allSchedules = [] } = useSchedules()
+  const { data: candidates = [] } = useCandidates()
+  const { data: homeVisitResults = [] } = useHomeVisitResults()
 
   const [expandedSchedules, setExpandedSchedules] = useState<string[]>([])
 
   useEffect(() => {
-    useRegionStore.getState().loadFromAPI()
-    useCandidateStore.getState().loadFromAPI()
-    useScheduleStore.getState().loadFromAPI()
-    useVisitorStore.getState().loadFromAPI()
-    useHomeVisitStore.getState().loadFromAPI()
+    
 
     const handleFocus = () => {
-      useHomeVisitStore.getState().loadFromAPI()
+      
     }
     window.addEventListener('focus', handleFocus)
 

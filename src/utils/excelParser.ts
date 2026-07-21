@@ -1,7 +1,6 @@
-﻿import * as XLSX from 'xlsx'
-import { Candidate } from '../store/candidateStore'
-import { Visitor } from '../store/visitorStore'
-import { Instrument } from '../store/instrumentStore'
+import * as XLSX from 'xlsx'
+import { api } from '../lib/api'
+import { Candidate, Visitor, Instrument, Schedule } from '../types'
 
 export interface ParsedCandidateData {
   candidates: Candidate[]
@@ -124,11 +123,11 @@ export const parseExcelFile = (file: File): Promise<ParsedCandidateData> => {
   })
 }
 
-export const parseVisitorExcelFile = (file: File): Promise<ParsedVisitorData> => {
-  return new Promise((resolve, reject) => {
+export const parseVisitorExcelFile = async (file: File): Promise<ParsedVisitorData> => {
+  return new Promise(async (resolve, reject) => {
     const reader = new FileReader()
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = new Uint8Array(event.target?.result as ArrayBuffer)
         const workbook = XLSX.read(data, { type: 'array' })
@@ -146,16 +145,31 @@ export const parseVisitorExcelFile = (file: File): Promise<ParsedVisitorData> =>
           return
         }
 
+        let regionsData: any[] = []
+        try {
+          const { data } = await api.get('/regions')
+          regionsData = data
+        } catch (error: any) {
+          reject(new Error(`Failed to fetch regions: ${error.message}`))
+          return
+        }
+
+        const regionMap = new Map<string, string>()
+        ;(regionsData || []).forEach((r: any) => {
+          if (r.code) regionMap.set(r.code.toUpperCase(), r.id)
+          if (r.name) regionMap.set(r.name.toUpperCase(), r.id)
+        })
+
         const visitors: Visitor[] = []
         const errors: string[] = []
 
         rows.forEach((row, index) => {
           try {
             const id = String(row['ID'] || row['id'] || row['Id'] || '').trim()
-            const fullName = String(row['Nama'] || row['nama'] || row['Name'] || row['name'] || '').trim()
+            const wilayahCode = String(row['Wilayah'] || row['wilayah'] || '').trim().toUpperCase()
             let role = String(row['Role'] || row['role'] || '').trim().toLowerCase()
 
-            // Normalize role variations (handle "Etoser" â†’ "etoser", etc)
+            // Normalize role variations (handle "Etoser" → "etoser", etc)
             if (role === 'etoser' || role === 'Etoser' || role === 'ETOSER') {
               role = 'etoser'
             } else if (role === 'mitra' || role === 'Mitra' || role === 'MITRA' || role === 'cabang' || role === 'Cabang' || role === 'CABANG') {
@@ -169,10 +183,17 @@ export const parseVisitorExcelFile = (file: File): Promise<ParsedVisitorData> =>
               errors.push(`Row ${index + 2}: ID is required`)
               return
             }
-            if (!fullName) {
-              errors.push(`Row ${index + 2}: Nama is required`)
+            if (!wilayahCode) {
+              errors.push(`Row ${index + 2}: Wilayah is required`)
               return
             }
+
+            const regionId = regionMap.get(wilayahCode)
+            if (!regionId) {
+              errors.push(`Row ${index + 2}: Kode wilayah "${wilayahCode}" tidak ditemukan. Gunakan: ${Array.from(regionMap.keys()).join(', ')}`)
+              return
+            }
+
             if (!role || !['etoser', 'mitra', 'fasil'].includes(role)) {
               errors.push(`Row ${index + 2}: Role must be etoser, mitra, or fasil (case-insensitive)`)
               return
@@ -180,7 +201,7 @@ export const parseVisitorExcelFile = (file: File): Promise<ParsedVisitorData> =>
 
             visitors.push({
               id,
-              full_name: fullName,
+              regionId,
               role: role as 'etoser' | 'mitra' | 'fasil',
             })
           } catch (error) {
@@ -252,9 +273,6 @@ export const parseScheduleExcelFile = async (file: File): Promise<ParsedSchedule
 
     reader.onload = async (event) => {
       try {
-        // Import supabase here to avoid circular dependencies
-        const { supabase } = await import('../lib/supabase')
-
         const data = new Uint8Array(event.target?.result as ArrayBuffer)
         const workbook = XLSX.read(data, { type: 'array' })
         const worksheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -271,11 +289,12 @@ export const parseScheduleExcelFile = async (file: File): Promise<ParsedSchedule
           return
         }
 
-        // Fetch regions for validation
-        const { data: regionsData, error: regionsError } = await supabase.from('regions').select('id, name, code')
-
-        if (regionsError) {
-          reject(new Error(`Failed to fetch regions: ${regionsError.message}`))
+        let regionsData: any[] = []
+        try {
+          const { data } = await api.get('/regions')
+          regionsData = data
+        } catch (error: any) {
+          reject(new Error(`Failed to fetch regions: ${error.message}`))
           return
         }
 
@@ -377,32 +396,32 @@ export const downloadVisitorTemplate = () => {
   const template = [
     {
       ID: 'vis-001',
-      Nama: 'Dr. Bambang Sutrisno',
+      Wilayah: 'DKI Jakarta',
       Role: 'etoser',
     },
     {
       ID: 'vis-002',
-      Nama: 'Ibu Sinta Wijaya',
+      Wilayah: 'Jawa Barat',
       Role: 'etoser',
     },
     {
       ID: 'vis-003',
-      Nama: 'Pak Hendra Gunawan',
+      Wilayah: 'DKI Jakarta',
       Role: 'mitra',
     },
     {
       ID: 'vis-004',
-      Nama: 'Dr. Eka Putri',
+      Wilayah: 'Jawa Timur',
       Role: 'mitra',
     },
     {
       ID: 'vis-005',
-      Nama: 'Ahmad Syaiful (Fasil)',
+      Wilayah: 'DKI Jakarta',
       Role: 'fasil',
     },
     {
       ID: 'vis-006',
-      Nama: 'Sri Rahayu (Fasil)',
+      Wilayah: 'Jawa Barat',
       Role: 'fasil',
     },
   ]
@@ -420,7 +439,7 @@ export const downloadVisitorTemplate = () => {
     [],
     ['Kolom yang diperlukan:'],
     ['- ID: Identifier unik (contoh: vis-001, vis-002, vis-003)'],
-    ['- Nama: Nama lengkap visitor'],
+    ['- Wilayah: Kode wilayah atau Nama wilayah (contoh: LKT, DKI Jakarta)'],
     ['- Role: etoser, mitra, atau fasil (LOWERCASE)'],
     [],
     ['Catatan:'],
@@ -489,6 +508,7 @@ export const parseInstrumentCSVFile = (file: File): Promise<ParsedInstrumentData
               instruments.push({
                 id: id || `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 pertanyaan,
+                type: 'likert', // Default to likert for old CSV format
                 urutan: instruments.length + 1,
               })
             } catch (error) {
@@ -542,6 +562,11 @@ export const parseInstrumentExcelFile = (file: File): Promise<ParsedInstrumentDa
           try {
             const id = String(row['ID'] || row['id'] || '').trim()
             const pertanyaan = String(row['Pertanyaan'] || row['pertanyaan'] || '').trim()
+            const keterangan = String(row['Keterangan'] || row['keterangan'] || '').trim().toLowerCase()
+            const typeValue = String(row['Type'] || row['type'] || '').trim().toLowerCase()
+            
+            // Infer type: if explicit Type column is 'essay' or Keterangan contains 'esai'/'essay'
+            const type = (typeValue === 'essay' || typeValue === 'esai' || keterangan.includes('esai') || keterangan.includes('essay')) ? 'essay' : 'likert'
 
             if (!pertanyaan) {
               errors.push(`Row ${index + 2}: Pertanyaan is required`)
@@ -554,6 +579,7 @@ export const parseInstrumentExcelFile = (file: File): Promise<ParsedInstrumentDa
             instruments.push({
               id: instrId,
               pertanyaan,
+              type,
               urutan: index + 1,
             })
           } catch (error) {
