@@ -112,25 +112,25 @@ backendApp.delete('/candidates/:id', async (req, res) => {
 
 // --- VISITORS ---
 backendApp.get('/visitors', async (req, res) => {
-  const visitors = await (req as any).prisma.visitor.findMany();
+  const visitors = await (req as any).prisma.visitor.findMany({ include: { region: true } });
   res.json(visitors);
 });
 
 backendApp.post('/visitors', async (req, res) => {
-  const { id, name, role } = req.body; 
-  const visitor = await (req as any).prisma.visitor.create({ data: { id, name, role } });
+  const { id, regionId, role } = req.body; 
+  const visitor = await (req as any).prisma.visitor.create({ data: { id, regionId, role }, include: { region: true } });
   res.json(visitor);
 });
 
 backendApp.post('/visitors/bulk', async (req, res) => {
-  const visitors = req.body.map((v: any) => ({ id: v.id, name: v.name, role: v.role }));
+  const visitors = req.body.map((v: any) => ({ id: v.id, regionId: v.regionId, role: v.role }));
   const created = await (req as any).prisma.visitor.createMany({ data: visitors, skipDuplicates: true });
   res.json(created);
 });
 
 backendApp.put('/visitors/:id', async (req, res) => {
-  const { name, role } = req.body; 
-  const visitor = await (req as any).prisma.visitor.update({ where: { id: req.params.id }, data: { name, role } });
+  const { regionId, role } = req.body; 
+  const visitor = await (req as any).prisma.visitor.update({ where: { id: req.params.id }, data: { regionId, role }, include: { region: true } });
   res.json(visitor);
 });
 
@@ -146,13 +146,13 @@ backendApp.get('/instruments', async (req, res) => {
 });
 
 backendApp.post('/instruments', async (req, res) => {
-  const { id, pertanyaan, urutan } = req.body; 
-  const instrument = await (req as any).prisma.instrument.create({ data: { id, pertanyaan, urutan: Number(urutan) } });
+  const { id, pertanyaan, type, urutan } = req.body; 
+  const instrument = await (req as any).prisma.instrument.create({ data: { id, pertanyaan, type, urutan: Number(urutan) } });
   res.json(instrument);
 });
 
 backendApp.post('/instruments/bulk', async (req, res) => {
-  const instruments = req.body.map((i: any) => ({ id: i.id, pertanyaan: i.pertanyaan, urutan: Number(i.urutan) })); 
+  const instruments = req.body.map((i: any) => ({ id: i.id, pertanyaan: i.pertanyaan, type: i.type, urutan: Number(i.urutan) })); 
   const created = await (req as any).prisma.instrument.createMany({ data: instruments, skipDuplicates: true });
   res.json(created);
 });
@@ -162,24 +162,33 @@ backendApp.delete('/instruments/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+backendApp.put('/instruments/:id', async (req, res) => {
+  const { pertanyaan, type, urutan } = req.body;
+  const instrument = await (req as any).prisma.instrument.update({
+    where: { id: req.params.id },
+    data: { pertanyaan, type, urutan: Number(urutan) }
+  });
+  res.json(instrument);
+});
+
 // --- SCHEDULES ---
 backendApp.get('/schedules', async (req, res) => {
   const schedules = await (req as any).prisma.schedule.findMany({
-    include: { candidate: true, visitor: true }
+    include: { candidate: true, visitor: { include: { region: true } } }
   });
   res.json(schedules);
 });
 
 backendApp.post('/schedules', async (req, res) => {
   const { id, candidateId, visitorId, schedule_date, schedule_time, status, notes } = req.body; 
-  const schedule = await (req as any).prisma.schedule.create({ data: { id, candidateId, visitorId, schedule_date, schedule_time, status, notes }, include: { candidate: true, visitor: true } });
+  const schedule = await (req as any).prisma.schedule.create({ data: { id, candidateId, visitorId, schedule_date, schedule_time, status, notes }, include: { candidate: true, visitor: { include: { region: true } } } });
   res.json(schedule);
 });
 
 backendApp.put('/schedules/:id', async (req, res) => {
   const schedule = await (req as any).prisma.schedule.update({ 
     where: { id: req.params.id }, 
-    data: (({ candidateId, visitorId, schedule_date, schedule_time, status, notes }) => ({ candidateId, visitorId, schedule_date, schedule_time, status, notes }))(req.body), include: { candidate: true, visitor: true } });
+    data: (({ candidateId, visitorId, schedule_date, schedule_time, status, notes }) => ({ candidateId, visitorId, schedule_date, schedule_time, status, notes }))(req.body), include: { candidate: true, visitor: { include: { region: true } } } });
   res.json(schedule);
 });
 
@@ -191,22 +200,22 @@ backendApp.delete('/schedules/:id', async (req, res) => {
 // --- HOME VISIT RESULTS ---
 backendApp.get('/results', async (req, res) => {
   const results = await (req as any).prisma.homeVisitResult.findMany({
-    include: { candidate: true, visitor: true }
+    include: { candidate: true, visitor: { include: { region: true } } }
   });
   res.json(results);
 });
 
 backendApp.post('/results', async (req, res) => {
   const result = await (req as any).prisma.homeVisitResult.create({ 
-    data: (({ id, candidateId, fasilId, answers, score, status, notes, photos }) => ({ id, candidateId, fasilId, answers, score, status, notes, photos }))(req.body), include: { candidate: true, visitor: true } });
+    data: (({ id, candidateId, fasilId, visitorName, answers, score, status, notes, photos }) => ({ id, candidateId, fasilId, visitorName, answers, score, status, notes, photos }))(req.body), include: { candidate: true, visitor: { include: { region: true } } } });
   res.json(result);
 });
 
 backendApp.put('/results/:id', async (req, res) => {
   const result = await (req as any).prisma.homeVisitResult.update({
     where: { id: req.params.id },
-    data: (({ id, candidateId, fasilId, answers, score, status, notes, photos }) => ({ id, candidateId, fasilId, answers, score, status, notes, photos }))(req.body),
-    include: { candidate: true, visitor: true }
+    data: (({ id, candidateId, fasilId, visitorName, answers, score, status, notes, photos }) => ({ id, candidateId, fasilId, visitorName, answers, score, status, notes, photos }))(req.body),
+    include: { candidate: true, visitor: { include: { region: true } } }
   });
   res.json(result);
 });
@@ -222,13 +231,6 @@ backendApp.use((err: any, _req: express.Request, res: express.Response, _next: e
   res.status(500).json({ error: 'Internal Server Error', message: err.message, stack: err.stack });
 });
 
-const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-  backendApp.listen(PORT, () => console.log('Listening on ' + PORT));
-}
-
 const serverlessApp = express();
 serverlessApp.use('/api', backendApp);
 export default serverlessApp;
-
-
