@@ -19,6 +19,7 @@ export default function DataKandidat() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [expandedIds, setExpandedIds] = useState<string[]>([])
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}})
+  const [temuanModal, setTemuanModal] = useState<{isOpen: boolean, temuanBerkas: string, temuanWawancara: string, candidateName: string}>({isOpen: false, temuanBerkas: '', temuanWawancara: '', candidateName: ''})
 
   const { data: candidates = [] } = useCandidates()
   const { mutateAsync: deleteCandidate } = useDeleteCandidate()
@@ -135,6 +136,7 @@ export default function DataKandidat() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Kampus</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Prodi</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">UKT</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Temuan Seleksi</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Aksi</th>
                   </tr>
                 </thead>
@@ -150,6 +152,22 @@ export default function DataKandidat() {
                       <td className="px-6 py-4 text-sm text-gray-600">{candidate.campus}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{candidate.major}</td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-medium">{candidate.ukt || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {candidate.temuan_seleksi_berkas || candidate.temuan_seleksi_wawancara ? (
+                          <button
+                            onClick={() => setTemuanModal({isOpen: true, temuanBerkas: candidate.temuan_seleksi_berkas || '', temuanWawancara: candidate.temuan_seleksi_wawancara || '', candidateName: candidate.full_name})}
+                            className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                            title="Lihat Temuan Seleksi"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          </button>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex gap-2 justify-center">
                           <button
@@ -236,6 +254,23 @@ export default function DataKandidat() {
                                 <div className="col-span-2">
                                   <span className="text-slate-400 block">UKT</span>
                                   <span className="font-semibold text-slate-700">{candidate.ukt || '-'}</span>
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="text-slate-400 block">Temuan Seleksi</span>
+                                  {candidate.temuan_seleksi_berkas || candidate.temuan_seleksi_wawancara ? (
+                                    <button
+                                      onClick={() => setTemuanModal({isOpen: true, temuanBerkas: candidate.temuan_seleksi_berkas || '', temuanWawancara: candidate.temuan_seleksi_wawancara || '', candidateName: candidate.full_name})}
+                                      className="mt-1 text-sm text-blue-600 font-medium hover:underline flex items-center gap-1"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      </svg>
+                                      Lihat Temuan Seleksi
+                                    </button>
+                                  ) : (
+                                    <span className="font-semibold text-slate-700">-</span>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex gap-2 justify-end pt-2">
@@ -326,6 +361,45 @@ export default function DataKandidat() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))}
       />
+
+      {/* Modal Temuan Seleksi */}
+      {temuanModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full overflow-hidden">
+            <div className="border-b border-slate-100 p-4 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 text-lg">Temuan Seleksi {temuanModal.candidateName}</h3>
+              <button 
+                onClick={() => setTemuanModal({isOpen: false, temuanBerkas: '', temuanWawancara: '', candidateName: ''})}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 h-full">
+                <h4 className="font-semibold text-blue-900 mb-2 text-sm">Temuan Seleksi Berkas</h4>
+                <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
+                  {temuanModal.temuanBerkas || '-'}
+                </p>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 h-full">
+                <h4 className="font-semibold text-amber-900 mb-2 text-sm">Temuan Seleksi Wawancara</h4>
+                <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
+                  {temuanModal.temuanWawancara || '-'}
+                </p>
+              </div>
+            </div>
+            <div className="border-t border-slate-100 p-4 flex justify-end">
+              <button 
+                onClick={() => setTemuanModal({isOpen: false, temuanBerkas: '', temuanWawancara: '', candidateName: ''})}
+                className="px-5 py-2.5 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -345,6 +419,8 @@ function EditCandidateModal({ candidate, regions: regionsList, campuses: campuse
   const [gender, setGender] = useState(candidate.gender || '')
   const [major, setMajor] = useState(candidate.major || '')
   const [ukt, setUkt] = useState(candidate.ukt || '')
+  const [temuan_seleksi_berkas, setTemuanBerkas] = useState(candidate.temuan_seleksi_berkas || '')
+  const [temuan_seleksi_wawancara, setTemuanWawancara] = useState(candidate.temuan_seleksi_wawancara || '')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -362,6 +438,8 @@ function EditCandidateModal({ candidate, regions: regionsList, campuses: campuse
         gender,
         major,
         ukt,
+        temuan_seleksi_berkas,
+        temuan_seleksi_wawancara,
       })
       onClose()
     } finally {
@@ -371,10 +449,10 @@ function EditCandidateModal({ candidate, regions: regionsList, campuses: campuse
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Kandidat</h2>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nama</label>
             <input
@@ -456,6 +534,28 @@ function EditCandidateModal({ candidate, regions: regionsList, campuses: campuse
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Temuan Seleksi Berkas</label>
+            <textarea
+              value={temuan_seleksi_berkas}
+              onChange={(e) => setTemuanBerkas(e.target.value)}
+              placeholder="Catatan temuan seleksi berkas..."
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Temuan Seleksi Wawancara</label>
+            <textarea
+              value={temuan_seleksi_wawancara}
+              onChange={(e) => setTemuanWawancara(e.target.value)}
+              placeholder="Catatan temuan seleksi wawancara..."
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -495,6 +595,8 @@ function AddCandidateModal({ onClose, onAdd, suggestedId, regions: regionsList, 
   const [gender, setGender] = useState('')
   const [major, setMajor] = useState('')
   const [ukt, setUkt] = useState('')
+  const [temuan_seleksi_berkas, setTemuanBerkas] = useState('')
+  const [temuan_seleksi_wawancara, setTemuanWawancara] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -513,6 +615,8 @@ function AddCandidateModal({ onClose, onAdd, suggestedId, regions: regionsList, 
         gender,
         major,
         ukt,
+        temuan_seleksi_berkas,
+        temuan_seleksi_wawancara,
       })
       onClose()
     } finally {
@@ -522,10 +626,10 @@ function AddCandidateModal({ onClose, onAdd, suggestedId, regions: regionsList, 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Tambah Kandidat Baru</h2>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ID Kandidat</label>
             <input
@@ -617,6 +721,28 @@ function AddCandidateModal({ onClose, onAdd, suggestedId, regions: regionsList, 
               value={ukt}
               onChange={(e) => setUkt(formatRupiah(e.target.value))}
               placeholder="Contoh: Rp 1.500.000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Temuan Seleksi Berkas</label>
+            <textarea
+              value={temuan_seleksi_berkas}
+              onChange={(e) => setTemuanBerkas(e.target.value)}
+              placeholder="Catatan temuan seleksi berkas..."
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Temuan Seleksi Wawancara</label>
+            <textarea
+              value={temuan_seleksi_wawancara}
+              onChange={(e) => setTemuanWawancara(e.target.value)}
+              placeholder="Catatan temuan seleksi wawancara..."
+              rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>

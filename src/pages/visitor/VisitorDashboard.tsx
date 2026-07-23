@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useSchedules } from '../../hooks/useSchedules'
 import { useCandidates } from '../../hooks/useCandidates'
 import { useHomeVisitResults } from '../../hooks/useHomeVisitResults'
+import { Candidate } from '../../types'
 
 export default function VisitorDashboard() {
   const navigate = useNavigate()
@@ -17,6 +18,7 @@ export default function VisitorDashboard() {
   const { data: homeVisitResults = [] } = useHomeVisitResults()
 
   const [expandedSchedules, setExpandedSchedules] = useState<string[]>([])
+  const [temuanModal, setTemuanModal] = useState<{isOpen: boolean, candidate: Candidate | null}>({isOpen: false, candidate: null})
 
   useEffect(() => {
     
@@ -163,12 +165,27 @@ export default function VisitorDashboard() {
                                 Lihat Hasil
                               </Link>
                             ) : (
-                              <Link
-                                to={`/visitor/home-visit/${candId}`}
-                                className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-1.5 px-3 rounded-lg transition-all shrink-0 text-center shadow-sm"
-                              >
-                                Mulai Observasi
-                              </Link>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setTemuanModal({ isOpen: true, candidate })}
+                                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 p-2 rounded-lg transition-all shrink-0 border border-blue-200"
+                                  title="Lihat Temuan Seleksi"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                                <Link
+                                  to={`/visitor/home-visit/${candId}`}
+                                  className="bg-slate-800 hover:bg-slate-900 text-white p-2 rounded-lg transition-all shrink-0 shadow-sm"
+                                  title="Mulai Observasi"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                  </svg>
+                                </Link>
+                              </div>
                             )}
                           </div>
                         )
@@ -181,6 +198,42 @@ export default function VisitorDashboard() {
           </div>
         )}
       </div>
+
+      {/* Modal Temuan Seleksi */}
+      {temuanModal.isOpen && temuanModal.candidate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Temuan Seleksi: {temuanModal.candidate.full_name}</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto mb-4">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 h-full">
+                <h4 className="font-semibold text-blue-900 mb-2 text-sm">Temuan Seleksi Berkas</h4>
+                {temuanModal.candidate.temuan_seleksi_berkas ? (
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm">{temuanModal.candidate.temuan_seleksi_berkas}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm italic">-</p>
+                )}
+              </div>
+
+              <div className="bg-amber-50 rounded-lg p-4 border border-amber-100 h-full">
+                <h4 className="font-semibold text-amber-900 mb-2 text-sm">Temuan Seleksi Wawancara</h4>
+                {temuanModal.candidate.temuan_seleksi_wawancara ? (
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm">{temuanModal.candidate.temuan_seleksi_wawancara}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm italic">-</p>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setTemuanModal({ isOpen: false, candidate: null })}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

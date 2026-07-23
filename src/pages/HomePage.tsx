@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
 
-const ADMIN_PASSWORD = 'etos123'
+const ADMIN_PASSWORD = 'admin123'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -13,10 +13,13 @@ export default function HomePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const handleSelectRole = (selectedRole: 'admin' | 'etoser' | 'mitra' | 'fasil') => {
-    // Jalur bypass password admin untuk mode uji coba
     if (selectedRole === 'admin') {
-      setRole('admin')
-      navigate('/admin')
+      if (sessionStorage.getItem('admin_authenticated') === 'true') {
+        setRole('admin')
+        navigate('/admin')
+      } else {
+        setShowPasswordModal(true)
+      }
       return
     }
 
@@ -28,6 +31,7 @@ export default function HomePage() {
   const handleAdminPasswordSubmit = () => {
     if (adminPassword === ADMIN_PASSWORD) {
       // Password benar, set role admin dan navigate
+      sessionStorage.setItem('admin_authenticated', 'true')
       setShowPasswordModal(false)
       setRole('admin')
       navigate('/admin')

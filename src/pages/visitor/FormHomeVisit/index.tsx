@@ -60,6 +60,7 @@ export default function FormHomeVisit() {
         tampakDapur: z.string().min(1, 'Wajib upload foto dapur'),
         ruangTengah: z.string().min(1, 'Wajib upload foto ruang tengah'),
         kamarMandi: z.string().min(1, 'Wajib upload foto kamar mandi'),
+        kamarTidur: z.string().min(1, 'Wajib upload foto kamar tidur'),
         bersamaKeluarga: z.string().min(1, 'Wajib upload foto keluarga'),
         beritaAcara: z.string().min(1, 'Wajib upload foto berita acara')
       })
@@ -85,6 +86,7 @@ export default function FormHomeVisit() {
         tampakDapur: '',
         ruangTengah: '',
         kamarMandi: '',
+        kamarTidur: '',
         bersamaKeluarga: '',
         beritaAcara: ''
       }
@@ -122,7 +124,7 @@ export default function FormHomeVisit() {
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: 'homevisit' | 'depan' | 'dapur' | 'tengah' | 'mandi' | 'keluarga' | 'berita'
+    type: 'homevisit' | 'depan' | 'dapur' | 'tengah' | 'mandi' | 'tidur' | 'keluarga' | 'berita'
   ) => {
     const files = e.target.files
     if (!files) return
@@ -172,6 +174,8 @@ export default function FormHomeVisit() {
             setValue('photos.ruangTengah', base64, { shouldValidate: true })
           } else if (type === 'mandi') {
             setValue('photos.kamarMandi', base64, { shouldValidate: true })
+          } else if (type === 'tidur') {
+            setValue('photos.kamarTidur', base64, { shouldValidate: true })
           } else if (type === 'keluarga') {
             setValue('photos.bersamaKeluarga', base64, { shouldValidate: true })
           } else if (type === 'berita') {
@@ -257,6 +261,7 @@ export default function FormHomeVisit() {
         tampakDapur: photos.tampakDapur,
         ruangTengah: photos.ruangTengah,
         kamarMandi: photos.kamarMandi,
+        kamarTidur: photos.kamarTidur,
         bersamaKeluarga: photos.bersamaKeluarga,
         beritaAcara: photos.beritaAcara
       }
@@ -329,10 +334,9 @@ export default function FormHomeVisit() {
               <button
                 type="button"
                 onClick={() => {
-                   // Optional: allow jumping back, but prevent jumping forward without validation
-                   if (step.num < currentStep) setCurrentStep(step.num)
+                   setCurrentStep(step.num)
                 }}
-                className={`flex flex-col items-center focus:outline-none group transition-all ${step.num <= currentStep ? 'cursor-pointer active:scale-95' : 'cursor-not-allowed opacity-60'}`}
+                className={`flex flex-col items-center focus:outline-none group transition-all cursor-pointer active:scale-95`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
@@ -405,6 +409,7 @@ export default function FormHomeVisit() {
               photoTampakDapur={formPhotos?.tampakDapur || ''}
               photoRuangTengah={formPhotos?.ruangTengah || ''}
               photoKamarMandi={formPhotos?.kamarMandi || ''}
+              photoKamarTidur={formPhotos?.kamarTidur || ''}
               photoBersamaKeluarga={formPhotos?.bersamaKeluarga || ''}
               photoBeritaAcara={formPhotos?.beritaAcara || ''}
               handleFileUpload={handleFileUpload}
@@ -422,6 +427,7 @@ export default function FormHomeVisit() {
               photoTampakDapur={formPhotos?.tampakDapur || ''}
               photoRuangTengah={formPhotos?.ruangTengah || ''}
               photoKamarMandi={formPhotos?.kamarMandi || ''}
+              photoKamarTidur={formPhotos?.kamarTidur || ''}
               photoBersamaKeluarga={formPhotos?.bersamaKeluarga || ''}
               photoBeritaAcara={formPhotos?.beritaAcara || ''}
             />

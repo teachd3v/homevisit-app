@@ -10,6 +10,7 @@ interface StepReviewProps {
   photoTampakDapur: string
   photoRuangTengah: string
   photoKamarMandi: string
+  photoKamarTidur: string
   photoBersamaKeluarga: string
   photoBeritaAcara: string
 }
@@ -23,6 +24,7 @@ export default function StepReview({
   photoTampakDapur,
   photoRuangTengah,
   photoKamarMandi,
+  photoKamarTidur,
   photoBersamaKeluarga,
   photoBeritaAcara,
 }: StepReviewProps) {
@@ -111,6 +113,15 @@ export default function StepReview({
               <div className="w-full h-24 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-400">Belum ada foto</div>
             )}
             <span className="text-[9px] font-bold text-slate-500 mt-2">Kamar Mandi</span>
+          </div>
+          {/* Foto Kamar Tidur */}
+          <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">
+            {photoKamarTidur ? (
+              <img src={photoKamarTidur} className="w-full h-24 object-cover rounded-lg" alt="Kamar Tidur" />
+            ) : (
+              <div className="w-full h-24 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-400">Belum ada foto</div>
+            )}
+            <span className="text-[9px] font-bold text-slate-500 mt-2">Kamar Tidur</span>
           </div>
           {/* Foto Keluarga */}
           <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center">

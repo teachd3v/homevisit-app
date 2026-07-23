@@ -252,6 +252,8 @@ export default function BulkImportModal({ onClose }: BulkImportModalProps) {
                       <th className="px-2 py-1 text-left">Wilayah</th>
                       <th className="px-2 py-1 text-left">Kampus</th>
                       <th className="px-2 py-1 text-left">Prodi</th>
+                      <th className="px-2 py-1 text-left">Temuan Berkas</th>
+                      <th className="px-2 py-1 text-left">Temuan Wawancara</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,6 +264,8 @@ export default function BulkImportModal({ onClose }: BulkImportModalProps) {
                         <td className="px-2 py-1">{item.region}</td>
                         <td className="px-2 py-1">{item.campus}</td>
                         <td className="px-2 py-1">{item.major}</td>
+                        <td className="px-2 py-1 max-w-[100px] truncate" title={item.temuan_seleksi_berkas || ''}>{item.temuan_seleksi_berkas || '-'}</td>
+                        <td className="px-2 py-1 max-w-[100px] truncate" title={item.temuan_seleksi_wawancara || ''}>{item.temuan_seleksi_wawancara || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

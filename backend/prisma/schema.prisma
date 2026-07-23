@@ -33,8 +33,10 @@ model Candidate {
   campus            String
   major             String
   ukt               String?
-  home_visit_status String?           @default("pending")
+  home_visit_status String?           @default("belum_dijadwalkan")
   pantukhir_status  String?
+  temuan_seleksi_berkas    String?
+  temuan_seleksi_wawancara String?
   regionRel         Region?           @relation(fields: [region], references: [name], onDelete: SetNull)
   schedules         Schedule[]
   results           HomeVisitResult[]

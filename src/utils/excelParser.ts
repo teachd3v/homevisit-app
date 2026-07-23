@@ -65,6 +65,8 @@ export const parseExcelFile = (file: File): Promise<ParsedCandidateData> => {
             const campus = String(row['Kampus'] || row['kampus'] || row['Campus'] || row['campus'] || row['Sekolah'] || row['sekolah'] || '').trim()
             const major = String(row['Prodi'] || row['prodi'] || row['Program Studi'] || row['Major'] || row['major'] || '').trim()
             const ukt = String(row['UKT'] || row['ukt'] || '').trim()
+            const temuan_seleksi_berkas = String(row['Temuan Seleksi Berkas'] || row['temuan_seleksi_berkas'] || '').trim()
+            const temuan_seleksi_wawancara = String(row['Temuan Seleksi Wawancara'] || row['temuan_seleksi_wawancara'] || '').trim()
 
             // Validation
             if (!id) {
@@ -100,6 +102,8 @@ export const parseExcelFile = (file: File): Promise<ParsedCandidateData> => {
               gender,
               major,
               ukt,
+              temuan_seleksi_berkas,
+              temuan_seleksi_wawancara,
             })
           } catch (error) {
             errors.push(`Row ${index + 2}: Failed to parse row`)
@@ -236,6 +240,8 @@ export const downloadCandidateTemplate = () => {
       Kampus: 'Universitas Indonesia',
       Prodi: 'Teknik Informatika',
       UKT: 'Rp 2.000.000',
+      'Temuan Seleksi Berkas': 'Berkas lengkap, nilai sangat memuaskan.',
+      'Temuan Seleksi Wawancara': 'Kandidat memiliki prestasi tingkat nasional.',
     },
     {
       ID: '002',
@@ -245,6 +251,8 @@ export const downloadCandidateTemplate = () => {
       Kampus: 'Institut Teknologi Bandung',
       Prodi: 'Sistem Informasi',
       UKT: 'Rp 1.500.000',
+      'Temuan Seleksi Berkas': '-',
+      'Temuan Seleksi Wawancara': '-',
     },
     {
       ID: '003',
@@ -254,6 +262,8 @@ export const downloadCandidateTemplate = () => {
       Kampus: 'Universitas Airlangga',
       Prodi: 'Manajemen',
       UKT: 'Rp 1.000.000',
+      'Temuan Seleksi Berkas': 'Ada dokumen yang kurang jelas.',
+      'Temuan Seleksi Wawancara': 'Perlu dicek lebih lanjut kondisi rumahnya.',
     },
   ]
 
@@ -262,7 +272,7 @@ export const downloadCandidateTemplate = () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Kandidat')
 
   // Auto-size columns
-  ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 15 }]
+  ws['!cols'] = [{ wch: 8 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 35 }, { wch: 35 }]
 
   XLSX.writeFile(wb, 'template-kandidat.xlsx')
 }

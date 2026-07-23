@@ -6,9 +6,10 @@ interface StepDokumentasiProps {
   photoTampakDapur: string
   photoRuangTengah: string
   photoKamarMandi: string
+  photoKamarTidur: string
   photoBersamaKeluarga: string
   photoBeritaAcara: string
-  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, type: 'homevisit' | 'depan' | 'dapur' | 'tengah' | 'mandi' | 'keluarga' | 'berita') => void
+  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, type: 'homevisit' | 'depan' | 'dapur' | 'tengah' | 'mandi' | 'tidur' | 'keluarga' | 'berita') => void
   removeHomeVisitPhoto: (index: number) => void
   errors?: any
 }
@@ -19,6 +20,7 @@ export default function StepDokumentasi({
   photoTampakDapur,
   photoRuangTengah,
   photoKamarMandi,
+  photoKamarTidur,
   photoBersamaKeluarga,
   photoBeritaAcara,
   handleFileUpload,
@@ -167,11 +169,35 @@ export default function StepDokumentasi({
           )}
         </div>
 
-        {/* 6. Foto Bersama Keluarga Pendaftar */}
+        {/* 6. Foto Kamar Tidur */}
+        <div className={`p-4 bg-slate-50 border rounded-2xl space-y-3 ${errors?.kamarTidur ? 'border-red-300' : 'border-slate-100'}`}>
+          <div>
+            <label className="text-sm font-bold text-slate-800 block">
+              6. Foto Kamar Tidur <span className="text-red-500">*</span>
+            </label>
+            <span className="text-[10px] text-slate-500 block mt-0.5">
+              Wajib 1 foto saja (Maksimal ukuran 10MB)
+            </span>
+            {errors?.kamarTidur && <p className="text-[10px] text-red-600 font-bold mt-1">*{errors.kamarTidur.message}</p>}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e, 'tidur')}
+            className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+          />
+          {photoKamarTidur && (
+            <div className="relative w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-white">
+              <img src={photoKamarTidur} className="w-full h-full object-cover" alt="Kamar Tidur" />
+            </div>
+          )}
+        </div>
+
+        {/* 7. Foto Bersama Keluarga Pendaftar */}
         <div className={`p-4 bg-slate-50 border rounded-2xl space-y-3 ${errors?.bersamaKeluarga ? 'border-red-300' : 'border-slate-100'}`}>
           <div>
             <label className="text-sm font-bold text-slate-800 block">
-              6. Foto Bersama Keluarga Pendaftar <span className="text-red-500">*</span>
+              7. Foto Bersama Keluarga Pendaftar <span className="text-red-500">*</span>
             </label>
             <span className="text-[10px] text-slate-500 block mt-0.5">
               Wajib 1 foto saja (Maksimal ukuran 10MB)
@@ -191,11 +217,11 @@ export default function StepDokumentasi({
           )}
         </div>
 
-        {/* 7. Foto Berita Acara */}
+        {/* 8. Foto Berita Acara */}
         <div className={`p-4 bg-slate-50 border rounded-2xl space-y-3 ${errors?.beritaAcara ? 'border-red-300' : 'border-slate-100'}`}>
           <div>
             <label className="text-sm font-bold text-slate-800 block">
-              7. Foto Berita Acara <span className="text-red-500">*</span>
+              8. Foto Berita Acara <span className="text-red-500">*</span>
             </label>
             <span className="text-[10px] text-slate-500 block mt-0.5">
               Wajib 1 foto saja (Maksimal ukuran 10MB)

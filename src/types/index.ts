@@ -8,6 +8,8 @@ export interface Candidate {
   ukt?: string
   home_visit_status?: 'pending' | 'lolos' | 'gagal'
   pantukhir_status?: 'lolos' | 'gagal' | null
+  temuan_seleksi_berkas?: string | null
+  temuan_seleksi_wawancara?: string | null
 }
 
 export interface Visitor {

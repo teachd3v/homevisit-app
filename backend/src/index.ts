@@ -88,20 +88,20 @@ app.get('/candidates', async (req, res) => {
 });
 
 app.post('/candidates', async (req, res) => {
-  const { id, full_name, gender, region, campus, major, ukt } = req.body; 
-  const candidate = await (req as any).prisma.candidate.create({ data: { id, full_name, gender, region, campus, major, ukt } });
+  const { id, full_name, gender, region, campus, major, ukt, temuan_seleksi_berkas, temuan_seleksi_wawancara } = req.body; 
+  const candidate = await (req as any).prisma.candidate.create({ data: { id, full_name, gender, region, campus, major, ukt, temuan_seleksi_berkas, temuan_seleksi_wawancara } });
   res.json(candidate);
 });
 
 app.post('/candidates/bulk', async (req, res) => {
-  const candidates = req.body.map((c: any) => ({ id: c.id, full_name: c.full_name, gender: c.gender, region: c.region, campus: c.campus, major: c.major, ukt: c.ukt })); 
+  const candidates = req.body.map((c: any) => ({ id: c.id, full_name: c.full_name, gender: c.gender, region: c.region, campus: c.campus, major: c.major, ukt: c.ukt, temuan_seleksi_berkas: c.temuan_seleksi_berkas, temuan_seleksi_wawancara: c.temuan_seleksi_wawancara })); 
   const created = await (req as any).prisma.candidate.createMany({ data: candidates, skipDuplicates: true });
   res.json(created);
 });
 
 app.put('/candidates/:id', async (req, res) => {
-  const { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } = req.body; 
-  const candidate = await (req as any).prisma.candidate.update({ where: { id: req.params.id }, data: { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status } });
+  const { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status, temuan_seleksi_berkas, temuan_seleksi_wawancara } = req.body; 
+  const candidate = await (req as any).prisma.candidate.update({ where: { id: req.params.id }, data: { full_name, gender, region, campus, major, ukt, home_visit_status, pantukhir_status, temuan_seleksi_berkas, temuan_seleksi_wawancara } });
   res.json(candidate);
 });
 
@@ -232,9 +232,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log('Listening on ' + PORT));
-}
+app.listen(PORT, () => console.log('Listening on ' + PORT));
 
 export default app;
 
